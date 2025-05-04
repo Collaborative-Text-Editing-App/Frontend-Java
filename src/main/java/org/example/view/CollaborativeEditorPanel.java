@@ -1,6 +1,8 @@
 package org.example.view;
 
 import org.example.service.WebSocketService;
+import org.example.dto.TextOperationMessage;
+import org.example.dto.DocumentUpdateMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,10 +21,33 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
     private final WebSocketService webSocketService;
-
+    private boolean isRemoteUpdate = false;
     public CollaborativeEditorPanel(WebSocketService webSocketService) {
         this.webSocketService = webSocketService;
         setLayout(new BorderLayout());
+        
+        // Start a thread to handle document updates
+        new Thread(() -> {
+            while (true) {
+                DocumentUpdateMessage update = webSocketService.getNextDocumentUpdate();
+                System.out.println("Received update: " + update);
+                if (update != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        // Only update if the content is different to avoid cursor jumping
+                        if (!textArea.getText().equals(update.getContent())) {
+                            isRemoteUpdate = true;
+//                            int caretPosition = textArea.getCaretPosition();
+                            textArea.setText(update.getContent());
+//                            // Restore cursor position if possible
+//                            if (caretPosition <= update.getContent().length()) {
+//                                textArea.setCaretPosition(caretPosition);
+//                            }
+                            isRemoteUpdate = false;
+                        }
+                    });
+                }
+            }
+        }).start();
 
         // === Left Sidebar ===
         JPanel leftPanel = new JPanel();
@@ -115,7 +140,7 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(userScroll);
 
         // === Editor Area ===
-        textArea = new JTextArea("hello");
+        textArea = new JTextArea("");
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
 
@@ -123,23 +148,55 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
+                if (isRemoteUpdate) {
+                    return;
+                }
+                try {
+                    int offset = e.getOffset();
+                    int length = e.getLength();
+                    String newText = textArea.getText(offset, length);
+                    
+                    // Create and send insertion message
+                    TextOperationMessage message = new TextOperationMessage();
+                    message.setOperationType("INSERT");
+                    message.setPosition(offset);
+                    message.setCharacter(newText.charAt(0));
+                    message.setUserId(webSocketService.getUserId());
+                    message.setDocumentId("test-doc-123");
+                    
+                    // Send to the correct endpoint for CRDT operations
+                    webSocketService.sendMessage("/document.edit", message);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
 
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
+                if (isRemoteUpdate) {
+                    return;
+                }
+                try {
+                    int offset = e.getOffset();
+                    int length = e.getLength();
+                    
+                    // Create and send deletion message
+                    TextOperationMessage message = new TextOperationMessage();
+                    message.setOperationType("DELETE");
+                    message.setPosition(offset);
+                    message.setUserId(webSocketService.getUserId());
+                    message.setDocumentId(webSocketService.getDocumentId());
+                    
+                    // Send to the correct endpoint for CRDT operations
+                    webSocketService.sendMessage("/document.edit", message);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
 
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
-            }
-
-            private void sendTextUpdate() {
-                if (webSocketService != null) {
-                    webSocketService.sendMessage("/app/text-update", textArea.getText());
-                }
+                // This is for style changes, which we don't need to handle
             }
         });
 
