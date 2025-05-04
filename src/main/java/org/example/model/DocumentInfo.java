@@ -10,14 +10,13 @@ public class DocumentInfo {
     private String editorCode;   // For users with edit permissions
     private String viewerCode;   // For read-only users
     private String content;  // CRDT-based character list
-    private Map<String, Cursor> activeUsers; // Maps userId to their cursor position
+    private List<User> activeUsers; // Maps userId to their cursor position
     private Timestamp lastModified;
 
     // Default constructor for deserialization
     public DocumentInfo() {}
 
     // Getters and Setters
-
     public String getId() {
         return id;
     }
@@ -34,37 +33,12 @@ public class DocumentInfo {
          return content;
      }
 
-     public void setContent(String content) {
-         this.content = content;
-     }
-
-    public Map<String, Cursor> getActiveUsers() {
+    public List<User> getActiveUsers() {
         return activeUsers;
-    }
-
-    public void setActiveUsers(Map<String, Cursor> activeUsers) {
-        this.activeUsers = activeUsers;
     }
 
     public Timestamp getLastModified() {
         return lastModified;
     }
 
-    public void setLastModified(Timestamp lastModified) {
-        this.lastModified = lastModified;
-    }
-
-    // Helper Methods
-
-    public void updateLastModified() {
-        this.lastModified = new Timestamp(System.currentTimeMillis());
-    }
-
-    public void addActiveUser(String userId, Cursor cursor) {
-        activeUsers.put(userId, cursor);
-    }
-
-    public void removeActiveUser(String userId) {
-        activeUsers.remove(userId);
-    }
 }

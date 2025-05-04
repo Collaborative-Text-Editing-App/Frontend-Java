@@ -138,9 +138,14 @@ public class CollaborativeEditorPanel extends JPanel {
         activeUsersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JList<String> userList = new JList<>(
-                documentInfo.getActiveUsers().entrySet()
+                documentInfo.getActiveUsers()
                         .stream()
-                        .map(entry -> entry.getKey() + " -> " + entry.getValue().toString())
+                        .map(user ->
+                                "ID: " + user.getUserId() +
+                                        ", Role: " + user.getRole() +
+                                        ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-") +
+                                        ", Connected: " + user.isConnected()
+                        )
                         .toArray(String[]::new)
         );
 
@@ -154,6 +159,7 @@ public class CollaborativeEditorPanel extends JPanel {
 
         // === Editor Area ===
         textArea = new JTextArea("");
+        textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));

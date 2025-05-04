@@ -41,15 +41,17 @@ public class HomeScreenPanel extends JFrame {
         JButton importButton = createStyledButton("Import .txt Document");
         importButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFileFilter(new FileNameExtensionFilter("Text Files (*.txt)", "txt"));
+            FileNameExtensionFilter txtFilter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
+            fileChooser.setFileFilter(txtFilter);
+            // Only show .txt files, disable "All Files" option:
+            fileChooser.setAcceptAllFileFilterUsed(false);
             int result = fileChooser.showOpenDialog(this);
             if (result == JFileChooser.APPROVE_OPTION) {
                 File selected = fileChooser.getSelectedFile();
                 if (selected != null && selected.getName().toLowerCase().endsWith(".txt")) {
                     try {
                         String content = Files.readString(selected.toPath());
-                        // TODO: open editor panel with imported content
-                        controller.openImportedDocument(selected.getName(), content);
+                        controller.openImportedDocument(content);
                     } catch (IOException ioEx) {
                         showError("Failed to read file: " + ioEx.getMessage());
                     }

@@ -155,18 +155,30 @@ public class CollaborativeEditorController {
         }
     }
 
-    public void openImportedDocument(String name, String content) {
-        SwingUtilities.invokeLater(() -> {
-//            //CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(webSocketService);
-//            editorPanel.setInitialContent(name, content);
-//            JFrame editorFrame = new JFrame("Imported: " + name);
-//            editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-//            editorFrame.add(editorPanel);
-//            editorFrame.pack();
-//            editorFrame.setLocationRelativeTo(homeScreen);
-//            editorFrame.setVisible(true);
-            if (homeScreen != null) homeScreen.dispose();
-        });
+    public void openImportedDocument(String content) {
+        try {
+            DocumentInfo documentInfo = collaborationService.importDoc(content);
+
+            SwingUtilities.invokeLater(() -> {
+                // Pass WebSocketService into the editor panel
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
+                editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                editorFrame.add(editorPanel);
+                editorFrame.pack();
+                editorFrame.setLocationRelativeTo(homeScreen);
+                editorFrame.setVisible(true);
+                if (homeScreen != null) homeScreen.dispose();
+            });
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                if (homeScreen != null) {
+                    JOptionPane.showMessageDialog(homeScreen,
+                            "Error creating document: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        }
     }
 
     public void joinDoc(String code) {
