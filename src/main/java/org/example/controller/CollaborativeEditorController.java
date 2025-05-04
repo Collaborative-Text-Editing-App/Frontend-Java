@@ -19,38 +19,36 @@ public class CollaborativeEditorController {
     private String viewerCode;
     private String editorCode;
     private final JFrame homeScreen;
-    private final WebSocketService webSocketService;
-    public CollaborativeEditorController(String host, int port, JFrame homeScreen, WebSocketService webSocketService) {
+    public CollaborativeEditorController(String host, int port, JFrame homeScreen) {
         this.collaborationService = new CollaborativeEditorService(host, port);
         this.activeUsers = new ArrayList<>();
         this.homeScreen = homeScreen;
-        this.webSocketService = webSocketService;
         setupMessageHandler();
     }
 
     public DocumentUpdateMessage getDocumentUpdates(){
-        return this.webSocketService.getNextDocumentUpdate();
+        return this.collaborationService.getWebSocketService().getNextDocumentUpdate();
     }
 
     public void requestInitialText(){
         TextOperationMessage message = new TextOperationMessage();
         message.setOperationType("GET_STATE");
-        message.setUserId(webSocketService.getUserId());
-        message.setDocumentId(webSocketService.getDocumentId());
-        webSocketService.sendMessage("/document.edit", message);
+        message.setUserId(collaborationService.getWebSocketService().getUserId());
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+        collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
     }
 
     public void undoAction(){
         TextOperationMessage undoMsg = new TextOperationMessage();
-        undoMsg.setDocumentId(webSocketService.getDocumentId()); // or get from webSocketService
-        webSocketService.sendMessage("/document/undo", undoMsg);
+        undoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        collaborationService.getWebSocketService().sendMessage("/app/document/undo", undoMsg);
 
     }
 
     public void redoAction(){
         TextOperationMessage redoMsg = new TextOperationMessage();
-        redoMsg.setDocumentId(webSocketService.getDocumentId()); // or get from webSocketService
-        webSocketService.sendMessage("/document/redo", redoMsg);
+        redoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        collaborationService.getWebSocketService().sendMessage("/app/document/redo", redoMsg);
     }
 
     public void insertText(String newText, int offset){
@@ -59,11 +57,12 @@ public class CollaborativeEditorController {
             message.setOperationType("INSERT");
             message.setPosition(offset + i);
             message.setCharacter(newText.charAt(i));
-            message.setUserId(webSocketService.getUserId());
-            message.setDocumentId(webSocketService.getDocumentId());
-            webSocketService.sendMessage("/document.edit", message);
+            message.setUserId(collaborationService.getWebSocketService().getUserId());
+            message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+            collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
 
         }
+
     }
 
     public void removeText(int offset){
@@ -71,11 +70,11 @@ public class CollaborativeEditorController {
         TextOperationMessage message = new TextOperationMessage();
         message.setOperationType("DELETE");
         message.setPosition(offset);
-        message.setUserId(webSocketService.getUserId());
-        message.setDocumentId(webSocketService.getDocumentId());
+        message.setUserId(collaborationService.getWebSocketService().getUserId());
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
 
         // Send to the endpoint for CRDT operations
-        webSocketService.sendMessage("/document.edit", message);
+        collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
     }
     public void setTextArea(JTextArea textArea) {
         this.textArea = textArea;

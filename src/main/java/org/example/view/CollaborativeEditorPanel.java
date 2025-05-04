@@ -156,7 +156,8 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea = new JTextArea("");
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
-
+        textScroll.setPreferredSize(new Dimension(800, 800));
+        textScroll.setMinimumSize(new Dimension(600, 600));
         // Add text change listener to send updates to WebSocket
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override

@@ -10,11 +10,9 @@ import org.example.controller.CollaborativeEditorController;
 
 public class HomeScreenPanel extends JFrame {
     private final CollaborativeEditorController controller;
-    private final WebSocketService webSocketService;
 
 
-    public HomeScreenPanel(CollaborativeEditorController controller, WebSocketService webSocketService) {
-        this.webSocketService = webSocketService;
+    public HomeScreenPanel(CollaborativeEditorController controller) {
         this.controller = controller;
         initializeUI();
     }

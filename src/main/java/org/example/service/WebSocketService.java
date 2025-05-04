@@ -48,8 +48,8 @@ public class WebSocketService {
             public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
                 System.out.println("Connected to WebSocket server for document: " + documentId);
                 // Subscribe to document-specific updates
-                session.subscribe("/topic/documents/" + documentId + "/text-updates", this);
-                session.subscribe("/topic/documents/" + documentId + "/user-list", this);
+//                session.subscribe("/topic/documents/" + documentId + "/text-updates", this);
+//                session.subscribe("/topic/documents/" + documentId + "/user-list", this);
                 session.subscribe("/topic/document/" + documentId, new StompFrameHandler() {
                     @Override
                     public Type getPayloadType(StompHeaders headers) {
@@ -88,7 +88,7 @@ public class WebSocketService {
 
     public void sendMessage(String destination, Object payload) {
         if (stompSession != null && stompSession.isConnected()) {
-            stompSession.send("/app/documents/" + documentId + destination, payload);
+            stompSession.send(destination, payload);
         } else {
             System.err.println("Not connected to WebSocket server");
         }
