@@ -13,6 +13,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URI;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.example.view.styling.UIStyle.styleButton;
 import static org.example.view.styling.UIStyle.styleTextField;
@@ -26,6 +31,11 @@ public class CollaborativeEditorPanel extends JPanel {
     private JTextArea textArea;
     private final WebSocketService webSocketService;
     private boolean isRemoteUpdate = false;
+    private boolean isPaste = false;
+    private boolean isTyping = false;
+    private long lastTypingTime = 0;
+    private static final long TYPING_THRESHOLD = 100; // milliseconds between keystrokes
+
     public CollaborativeEditorPanel(WebSocketService webSocketService) {
         this.webSocketService = webSocketService;
         setLayout(new BorderLayout());
@@ -40,15 +50,9 @@ public class CollaborativeEditorPanel extends JPanel {
                 System.out.println("Received update: " + update);
                 if (update != null) {
                     SwingUtilities.invokeLater(() -> {
-                        // Only update if the content is different to avoid cursor jumping
                         if (!textArea.getText().equals(update.getContent())) {
                             isRemoteUpdate = true;
-//                            int caretPosition = textArea.getCaretPosition();
                             textArea.setText(update.getContent());
-//                            // Restore cursor position if possible
-//                            if (caretPosition <= update.getContent().length()) {
-//                                textArea.setCaretPosition(caretPosition);
-//                            }
                             isRemoteUpdate = false;
                         }
                     });
@@ -164,6 +168,32 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
 
+        // Add key bindings for paste
+        textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
+        textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                isPaste = true;
+                textArea.paste();
+            }
+        });
+
+        // Add key listener to detect typing
+        textArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() != KeyEvent.VK_CONTROL && 
+                    e.getKeyCode() != KeyEvent.VK_SHIFT && 
+                    e.getKeyCode() != KeyEvent.VK_ALT) {
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastTypingTime > TYPING_THRESHOLD) {
+                        isTyping = true;
+                    }
+                    lastTypingTime = currentTime;
+                }
+            }
+        });
+
         // Add text change listener to send updates to WebSocket
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -176,16 +206,30 @@ public class CollaborativeEditorPanel extends JPanel {
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
                     
-                    // Create and send insertion message
                     TextOperationMessage message = new TextOperationMessage();
                     message.setOperationType("INSERT");
                     message.setPosition(offset);
-                    message.setCharacter(newText.charAt(0));
                     message.setUserId(webSocketService.getUserId());
                     message.setDocumentId("test-doc-123");
-                    
-                    // Send to the correct endpoint for CRDT operations
-                    webSocketService.sendMessage("/document.edit", message);
+
+                    if (isPaste || !isTyping) {
+                        // Send the whole string for paste or non-typing operations
+                        message.setText(newText);
+                        webSocketService.sendMessage("/document.edit", message);
+                        isPaste = false;
+                        isTyping = false;
+                    } else {
+                        // Send character by character for typing
+                        for (int i = 0; i < newText.length(); i++) {
+                            TextOperationMessage charMessage = new TextOperationMessage();
+                            charMessage.setOperationType("INSERT");
+                            charMessage.setPosition(offset + i);
+                            charMessage.setText(String.valueOf(newText.charAt(i)));
+                            charMessage.setUserId(webSocketService.getUserId());
+                            charMessage.setDocumentId("test-doc-123");
+                            webSocketService.sendMessage("/document.edit", charMessage);
+                        }
+                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -199,16 +243,36 @@ public class CollaborativeEditorPanel extends JPanel {
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
+                    String deletedText = textArea.getText(offset, length);
                     
-                    // Create and send deletion message
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("DELETE");
-                    message.setPosition(offset);
-                    message.setUserId(webSocketService.getUserId());
-                    message.setDocumentId(webSocketService.getDocumentId());
-                    
-                    // Send to the correct endpoint for CRDT operations
-                    webSocketService.sendMessage("/document.edit", message);
+                    if (length == 1) {
+                        // Single character deletion (backspace or delete key)
+                        TextOperationMessage message = new TextOperationMessage();
+                        message.setOperationType("DELETE");
+                        message.setPosition(offset);
+                        message.setText(deletedText);
+                        message.setUserId(webSocketService.getUserId());
+                        message.setLength(length);  
+                        message.setDocumentId(webSocketService.getDocumentId());
+                        webSocketService.sendMessage("/document.edit", message);
+                    } else {
+                        // Multiple characters deletion (selection)
+                        List<TextOperationMessage> deleteOperations = new ArrayList<>();
+                        for (int i = 0; i < length; i++) {
+                            TextOperationMessage message = new TextOperationMessage();
+                            message.setOperationType("DELETE");
+                            message.setPosition(offset + i);
+                            message.setText(String.valueOf(deletedText.charAt(i)));
+                            message.setUserId(webSocketService.getUserId());
+                            message.setLength(length);
+                            message.setDocumentId(webSocketService.getDocumentId());
+                            deleteOperations.add(message);
+                        }
+                        // Send all delete operations as a batch
+                        for (TextOperationMessage op : deleteOperations) {
+                            webSocketService.sendMessage("/document.edit", op);
+                        }
+                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
