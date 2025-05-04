@@ -13,19 +13,16 @@ import javax.swing.*;
 import static org.example.view.styling.UIStyle.styleButton;
 
 public class Main {
-    private static WebSocketService webSocketService;
 
     public static void main(String[] args) {
         // Initialize services
         CollaborativeEditorService collaborationService = new CollaborativeEditorService();
-
         // Initialize controller with connection parameters
         CollaborativeEditorController controller =
                 new CollaborativeEditorController(
                         collaborationService.host,
                         collaborationService.port,
-                        null,
-                        webSocketService
+                        null
                 );
 
         // Create and show home screen

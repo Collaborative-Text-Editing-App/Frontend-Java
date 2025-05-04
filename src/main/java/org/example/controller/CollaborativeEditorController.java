@@ -1,5 +1,7 @@
 package org.example.controller;
 
+import org.example.dto.DocumentUpdateMessage;
+import org.example.dto.TextOperationMessage;
 import org.example.model.DocumentInfo;
 import org.example.service.CollaborativeEditorService;
 import org.example.service.WebSocketService;
@@ -17,14 +19,63 @@ public class CollaborativeEditorController {
     private String viewerCode;
     private String editorCode;
     private final JFrame homeScreen;
-
-    public CollaborativeEditorController(String host, int port, JFrame homeScreen, WebSocketService webSocketService) {
+    public CollaborativeEditorController(String host, int port, JFrame homeScreen) {
         this.collaborationService = new CollaborativeEditorService(host, port);
         this.activeUsers = new ArrayList<>();
         this.homeScreen = homeScreen;
         setupMessageHandler();
     }
 
+    public DocumentUpdateMessage getDocumentUpdates(){
+        return this.collaborationService.getWebSocketService().getNextDocumentUpdate();
+    }
+
+    public void requestInitialText(){
+        TextOperationMessage message = new TextOperationMessage();
+        message.setOperationType("GET_STATE");
+        message.setUserId(collaborationService.getWebSocketService().getUserId());
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+        collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+    }
+
+    public void undoAction(){
+        TextOperationMessage undoMsg = new TextOperationMessage();
+        undoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        collaborationService.getWebSocketService().sendMessage("/app/document/undo", undoMsg);
+
+    }
+
+    public void redoAction(){
+        TextOperationMessage redoMsg = new TextOperationMessage();
+        redoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        collaborationService.getWebSocketService().sendMessage("/app/document/redo", redoMsg);
+    }
+
+    public void insertText(String newText, int offset){
+        for (int i = 0; i < newText.length(); i++) {
+            TextOperationMessage message = new TextOperationMessage();
+            message.setOperationType("INSERT");
+            message.setPosition(offset + i);
+            message.setCharacter(newText.charAt(i));
+            message.setUserId(collaborationService.getWebSocketService().getUserId());
+            message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+            collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+
+        }
+
+    }
+
+    public void removeText(int offset){
+        // Create and send deletion message
+        TextOperationMessage message = new TextOperationMessage();
+        message.setOperationType("DELETE");
+        message.setPosition(offset);
+        message.setUserId(collaborationService.getWebSocketService().getUserId());
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+
+        // Send to the endpoint for CRDT operations
+        collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+    }
     public void setTextArea(JTextArea textArea) {
         this.textArea = textArea;
     }
@@ -84,7 +135,7 @@ public class CollaborativeEditorController {
 
             SwingUtilities.invokeLater(() -> {
                 // Pass WebSocketService into the editor panel
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);
@@ -134,7 +185,7 @@ public class CollaborativeEditorController {
         try {
             DocumentInfo documentInfo = collaborationService.joinDocumentWithCode(code);
             SwingUtilities.invokeLater(() -> {
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);

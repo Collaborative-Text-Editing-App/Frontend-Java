@@ -1,7 +1,8 @@
 package org.example.view;
 
+import org.example.controller.CollaborativeEditorController;
 import org.example.model.DocumentInfo;
-import org.example.service.WebSocketService;
+import org.example.dto.DocumentUpdateMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,9 +20,39 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
-
-    public CollaborativeEditorPanel(DocumentInfo documentInfo) {
+    private final DocumentInfo documentInfo;
+    private boolean isRemoteUpdate = false;
+    private final CollaborativeEditorController controller;
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
+        this.documentInfo = documentInfo;
+        this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());
+
+        // Request initial document state
+        requestInitialDocumentState();
+        
+        // Start a thread to handle document updates
+        new Thread(() -> {
+            while (true) {
+                DocumentUpdateMessage update = this.controller.getDocumentUpdates();
+                System.out.println("Received update: " + update);
+                if (update != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        // Only update if the content is different to avoid cursor jumping
+                        if (!textArea.getText().equals(update.getContent())) {
+                            isRemoteUpdate = true;
+//                            int caretPosition = textArea.getCaretPosition();
+                            textArea.setText(update.getContent());
+//                            // Restore cursor position if possible
+//                            if (caretPosition <= update.getContent().length()) {
+//                                textArea.setCaretPosition(caretPosition);
+//                            }
+                            isRemoteUpdate = false;
+                        }
+                    });
+                }
+            }
+        }).start();
 
         // === Left Sidebar ===
         JPanel leftPanel = new JPanel();
@@ -36,6 +67,10 @@ public class CollaborativeEditorPanel extends JPanel {
         styleButton(undoButton);
         styleButton(redoButton);
         styleButton(exportButton);
+
+        undoButton.addActionListener(e -> controller.undoAction());
+
+        redoButton.addActionListener(e -> controller.redoAction());
 
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -123,20 +158,41 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(userScroll);
 
         // === Editor Area ===
+        textArea = new JTextArea("");
         textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
-
+        textScroll.setPreferredSize(new Dimension(800, 800));
+        textScroll.setMinimumSize(new Dimension(600, 600));
         // Add text change listener to send updates to WebSocket
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
+                if (isRemoteUpdate) return;
+                try {
+                    int offset = e.getOffset();
+                    int length = e.getLength();
+                    String newText = textArea.getText(offset, length);
+
+                    controller.insertText(newText, offset);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
 
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
+                if (isRemoteUpdate) {
+                    return;
+                }
+                try {
+                    int offset = e.getOffset();
+                    controller.removeText(offset);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
 
             @Override
@@ -154,6 +210,11 @@ public class CollaborativeEditorPanel extends JPanel {
         // Add to main panel
         add(leftPanel, BorderLayout.WEST);
         add(textScroll, BorderLayout.CENTER);
+    }
+
+    private void requestInitialDocumentState() {
+        // Send a request to get the current document state
+        controller.requestInitialText();
     }
 
     private JPanel createHorizontalSection(JComponent... components) {
@@ -206,8 +267,4 @@ public class CollaborativeEditorPanel extends JPanel {
         }
     }
 
-    // TODO:: CREATE THIS FUNCTION TO SET THE INITIAL CONTENT OF THE DOC FROM AN IMPORTANT FILE
-    public void setInitialContent(String name, String content) {
-
-    }
 }
