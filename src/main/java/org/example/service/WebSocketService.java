@@ -20,6 +20,11 @@ public class WebSocketService {
     private static final String WS_URL = "http://localhost:8080/editor-websocket";
     private StompSession stompSession;
     private StompSessionHandler messageHandler;
+    private final String documentId;
+
+    public WebSocketService(String documentId) {
+        this.documentId = documentId;
+    }
 
     public void setMessageHandler(StompSessionHandler handler) {
         this.messageHandler = handler;
@@ -29,7 +34,7 @@ public class WebSocketService {
         List<Transport> transports = new ArrayList<>();
         transports.add(new WebSocketTransport(new StandardWebSocketClient()));
         WebSocketClient client = new SockJsClient(transports);
-        
+
         WebSocketStompClient stompClient = new WebSocketStompClient(client);
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
@@ -45,11 +50,10 @@ public class WebSocketService {
 
             @Override
             public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-                System.out.println("Connected to WebSocket server");
-                // Subscribe to text updates
-                session.subscribe("/topic/text-updates", this);
-                // Subscribe to user list updates
-                session.subscribe("/topic/user-list", this);
+                System.out.println("Connected to WebSocket server for document: " + documentId);
+                // Subscribe to document-specific updates
+                session.subscribe("/topic/documents/" + documentId + "/text-updates", this);
+                session.subscribe("/topic/documents/" + documentId + "/user-list", this);
             }
         };
 
@@ -69,9 +73,9 @@ public class WebSocketService {
 
     public void sendMessage(String destination, Object payload) {
         if (stompSession != null && stompSession.isConnected()) {
-            stompSession.send("/app" + destination, payload);
+            stompSession.send("/app/documents/" + documentId + destination, payload);
         } else {
             System.err.println("Not connected to WebSocket server");
         }
     }
-} 
+}

@@ -1,22 +1,27 @@
 package org.example.controller;
 
-
+import org.example.model.DocumentInfo;
 import org.example.service.CollaborativeEditorService;
+import org.example.service.WebSocketService;
+import org.example.view.CollaborativeEditorPanel;
 
 import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CollaborativeEditorController {
-    private CollaborativeEditorService editorService;
+
+    private final CollaborativeEditorService collaborationService;
     private JTextArea textArea;
-    private List<String> activeUsers;
+    private final List<String> activeUsers;
     private String viewerCode;
     private String editorCode;
+    private final JFrame homeScreen;
 
-    public CollaborativeEditorController(String host, int port) {
-        this.editorService = new CollaborativeEditorService(host, port);
+    public CollaborativeEditorController(String host, int port, JFrame homeScreen, WebSocketService webSocketService) {
+        this.collaborationService = new CollaborativeEditorService(host, port);
         this.activeUsers = new ArrayList<>();
+        this.homeScreen = homeScreen;
         setupMessageHandler();
     }
 
@@ -25,8 +30,7 @@ public class CollaborativeEditorController {
     }
 
     private void setupMessageHandler() {
-        editorService.setOnMessageReceived(message -> {
-            // Handle different types of messages
+        collaborationService.setOnMessageReceived(message -> {
             if (message.startsWith("TEXT:")) {
                 updateText(message.substring(5));
             } else if (message.startsWith("USERS:")) {
@@ -36,16 +40,14 @@ public class CollaborativeEditorController {
     }
 
     public void sendTextUpdate(String text) {
-        if (editorService.isConnected()) {
-            editorService.sendTextUpdate("TEXT:" + text);
-        }
+//        if (collaborationService.isConnected()) {
+//            collaborationService.sendMessage("TEXT:" + text);
+//        }
     }
 
     private void updateText(String newText) {
         if (textArea != null) {
-            SwingUtilities.invokeLater(() -> {
-                textArea.setText(newText);
-            });
+            SwingUtilities.invokeLater(() -> textArea.setText(newText));
         }
     }
 
@@ -53,20 +55,14 @@ public class CollaborativeEditorController {
         String[] users = usersList.split(",");
         activeUsers.clear();
         for (String user : users) {
-            activeUsers.add(user.trim());
+            if (!user.trim().isEmpty()) {
+                activeUsers.add(user.trim());
+            }
         }
     }
 
     public List<String> getActiveUsers() {
         return new ArrayList<>(activeUsers);
-    }
-
-    public void setViewerCode(String code) {
-        this.viewerCode = code;
-    }
-
-    public void setEditorCode(String code) {
-        this.editorCode = code;
     }
 
     public String getViewerCode() {
@@ -78,6 +74,72 @@ public class CollaborativeEditorController {
     }
 
     public void disconnect() {
-        editorService.disconnect();
+        collaborationService.disconnect();
     }
-} 
+
+    public void createNewDocument() {
+
+        System.out.println("I AM IN THE CREATE NEW DOCUMENT FUNCTION");
+        try {
+            DocumentInfo documentInfo = collaborationService.createNewDoc();
+
+            SwingUtilities.invokeLater(() -> {
+                // Pass WebSocketService into the editor panel
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
+                editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                editorFrame.add(editorPanel);
+                editorFrame.pack();
+                editorFrame.setLocationRelativeTo(homeScreen);
+                editorFrame.setVisible(true);
+                if (homeScreen != null) homeScreen.dispose();
+            });
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                if (homeScreen != null) {
+                    JOptionPane.showMessageDialog(homeScreen,
+                            "Error creating document: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        }
+    }
+
+    public void openImportedDocument(String name, String content) {
+        SwingUtilities.invokeLater(() -> {
+//            //CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(webSocketService);
+//            editorPanel.setInitialContent(name, content);
+//            JFrame editorFrame = new JFrame("Imported: " + name);
+//            editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+//            editorFrame.add(editorPanel);
+//            editorFrame.pack();
+//            editorFrame.setLocationRelativeTo(homeScreen);
+//            editorFrame.setVisible(true);
+            if (homeScreen != null) homeScreen.dispose();
+        });
+    }
+
+    public void joinDoc(String code) {
+        try {
+            DocumentInfo documentInfo = collaborationService.joinDocumentWithCode(code);
+            SwingUtilities.invokeLater(() -> {
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
+                editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                editorFrame.add(editorPanel);
+                editorFrame.pack();
+                editorFrame.setLocationRelativeTo(homeScreen);
+                editorFrame.setVisible(true);
+                if (homeScreen != null) homeScreen.dispose();
+            });
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                if (homeScreen != null) {
+                    JOptionPane.showMessageDialog(homeScreen,
+                            "Error joining document: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        }
+    }
+}
