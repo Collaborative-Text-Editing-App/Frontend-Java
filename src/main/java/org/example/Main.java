@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.service.WebSocketService;
 import org.example.view.CollaborativeEditorPanel;
 
 import java.awt.*;
@@ -8,12 +9,23 @@ import javax.swing.*;
 
 import static org.example.view.styling.UIStyle.styleButton;
 
-
 public class Main {
+    private static WebSocketService webSocketService;
+
     public static void main(String[] args) {
+        // Initialize WebSocket service
+        webSocketService = new WebSocketService();
+        webSocketService.connect();
+
         // Create and set up the main frame
         JFrame frame = new JFrame("Collaborative Text Editor");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                webSocketService.disconnect();
+            }
+        });
         frame.setSize(500, 400);
         frame.setLocationRelativeTo(null); // Center the window
         // Create main panel with BorderLayout
@@ -33,15 +45,12 @@ public class Main {
         JButton newDocButton = new JButton("Create New Document");
         styleButton(newDocButton);
         newDocButton.addActionListener(e -> {
-
-            //createDocument(frame);
-
             JFrame editorFrame = new JFrame("Collaborative Editor");
             editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             editorFrame.setSize(800, 500);
 
-            // Add the custom panel
-            CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel();
+            // Add the custom panel with WebSocket service
+            CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(webSocketService);
             editorFrame.getContentPane().add(editorPanel);
 
             // Show new window
@@ -63,7 +72,7 @@ public class Main {
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.setSize(800, 500);
 
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel();
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(webSocketService);
                 editorFrame.getContentPane().add(editorPanel);
                 editorPanel.loadFile(selectedFile);
 
@@ -77,8 +86,9 @@ public class Main {
         joinButton.addActionListener(e -> {
             String sessionCode = JOptionPane.showInputDialog(frame, "Enter session code:", "Join Session", JOptionPane.PLAIN_MESSAGE);
             if (sessionCode != null && !sessionCode.trim().isEmpty()) {
-                // TODO: Implement session joining logic
-                JOptionPane.showMessageDialog(frame, "Will join session with code: " + sessionCode);
+                // Send join request to WebSocket server
+                webSocketService.sendMessage("/app/join", sessionCode);
+                JOptionPane.showMessageDialog(frame, "Joining session with code: " + sessionCode);
             }
         });
 

@@ -1,5 +1,7 @@
 package org.example.view;
 
+import org.example.service.WebSocketService;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -16,8 +18,10 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
+    private final WebSocketService webSocketService;
 
-    public CollaborativeEditorPanel() {
+    public CollaborativeEditorPanel(WebSocketService webSocketService) {
+        this.webSocketService = webSocketService;
         setLayout(new BorderLayout());
 
         // === Left Sidebar ===
@@ -114,6 +118,30 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea = new JTextArea("hello");
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
+
+        // Add text change listener to send updates to WebSocket
+        textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                sendTextUpdate();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                sendTextUpdate();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                sendTextUpdate();
+            }
+
+            private void sendTextUpdate() {
+                if (webSocketService != null) {
+                    webSocketService.sendMessage("/app/text-update", textArea.getText());
+                }
+            }
+        });
 
         // Add to main panel
         add(leftPanel, BorderLayout.WEST);

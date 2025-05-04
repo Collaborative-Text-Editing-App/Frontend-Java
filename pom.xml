@@ -32,5 +32,17 @@
             <version>2.7.10</version> <!-- Add the version here -->
             <scope>test</scope>
         </dependency>
+
+        <!-- Spring WebSocket -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+            <version>5.3.20</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+            <version>5.3.20</version>
+        </dependency>
     </dependencies>
 </project>
