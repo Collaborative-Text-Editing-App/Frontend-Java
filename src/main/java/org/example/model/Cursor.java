@@ -12,6 +12,12 @@ public class Cursor {
         this.color = color;
     }
 
+    @Override
+    public String toString() {
+        return "position: " + position;
+    }
+
+
     public Cursor(int position, String userId) {
         this(position, userId, null);
     }

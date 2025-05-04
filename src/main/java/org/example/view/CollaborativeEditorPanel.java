@@ -1,5 +1,6 @@
 package org.example.view;
 
+import org.example.model.DocumentInfo;
 import org.example.service.WebSocketService;
 
 import javax.swing.*;
@@ -18,10 +19,10 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
-    private final WebSocketService webSocketService;
+    private final DocumentInfo documentInfo;
 
-    public CollaborativeEditorPanel(WebSocketService webSocketService) {
-        this.webSocketService = webSocketService;
+    public CollaborativeEditorPanel(DocumentInfo documentInfo) {
+        this.documentInfo = documentInfo;
         setLayout(new BorderLayout());
 
         // === Left Sidebar ===
@@ -60,7 +61,7 @@ public class CollaborativeEditorPanel extends JPanel {
         JLabel viewerLabel = new JLabel("Viewer Code");
         viewerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         viewerLabel.setFont(labelFont);
-        JTextField viewerCode = new JTextField("#yq1xrx", 8);
+        JTextField viewerCode = new JTextField(documentInfo.getViewerCode(), 8);
         viewerCode.setFont(textFont);
         styleTextField(viewerCode);
         viewerCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
@@ -81,7 +82,7 @@ public class CollaborativeEditorPanel extends JPanel {
         JLabel editorLabel = new JLabel("Editor Code");
         editorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         editorLabel.setFont(labelFont);
-        JTextField editorCode = new JTextField("#yq1xrx", 8);
+        JTextField editorCode = new JTextField(documentInfo.getEditorCode(), 8);
         editorCode.setFont(textFont);
         styleTextField(editorCode);
         editorCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
@@ -103,9 +104,13 @@ public class CollaborativeEditorPanel extends JPanel {
         activeUsersLabel.setFont(labelFont);
         activeUsersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JList<String> userList = new JList<>(new String[]{
-                "Anonymous Frog (you)", "Anonymous Crab - line 2"
-        });
+        JList<String> userList = new JList<>(
+                documentInfo.getActiveUsers().entrySet()
+                        .stream()
+                        .map(entry -> entry.getKey() + " -> " + entry.getValue().toString())
+                        .toArray(String[]::new)
+        );
+
         userList.setFont(textFont);
         JScrollPane userScroll = new JScrollPane(userList);
         userScroll.setPreferredSize(new Dimension(200, 100));
@@ -137,9 +142,9 @@ public class CollaborativeEditorPanel extends JPanel {
             }
 
             private void sendTextUpdate() {
-                if (webSocketService != null) {
-                    webSocketService.sendMessage("/app/text-update", textArea.getText());
-                }
+//                if (webSocketService != null) {
+//                    webSocketService.sendMessage("/app/text-update", textArea.getText());
+//                }
             }
         });
 
@@ -196,5 +201,10 @@ public class CollaborativeEditorPanel extends JPanel {
                 "Error",
                 JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    // TODO:: CREATE THIS FUNCTION TO SET THE INITIAL CONTENT OF THE DOC FROM AN IMPORTANT FILE
+    public void setInitialContent(String name, String content) {
+
     }
 }
