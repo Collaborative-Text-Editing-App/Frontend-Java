@@ -59,12 +59,8 @@ public class WebSocketService {
                             DocumentUpdateMessage update = (DocumentUpdateMessage) payload;
 
                             // Ignore null/empty content messages
-                            if (update.getContent() != null && !update.getContent().isEmpty()) {
-                                documentUpdates.offer(update);
-                                System.out.println("Queued valid update: " + update.getContent());
-                            } else {
-                                System.out.println("Ignored invalid or empty update: " + update);
-                            }
+                            documentUpdates.offer(update);
+                            System.out.println("Queued valid update: " + update.getContent());
                         } else {
                             System.out.println("Received unexpected payload type: " + payload);
                         }

@@ -25,6 +25,9 @@ public class CollaborativeEditorPanel extends JPanel {
     public CollaborativeEditorPanel(WebSocketService webSocketService) {
         this.webSocketService = webSocketService;
         setLayout(new BorderLayout());
+
+        // Request initial document state
+        requestInitialDocumentState();
         
         // Start a thread to handle document updates
         new Thread(() -> {
@@ -203,6 +206,15 @@ public class CollaborativeEditorPanel extends JPanel {
         // Add to main panel
         add(leftPanel, BorderLayout.WEST);
         add(textScroll, BorderLayout.CENTER);
+    }
+
+    private void requestInitialDocumentState() {
+        // Send a request to get the current document state
+        TextOperationMessage message = new TextOperationMessage();
+        message.setOperationType("GET_STATE");
+        message.setUserId(webSocketService.getUserId());
+        message.setDocumentId(webSocketService.getDocumentId());
+        webSocketService.sendMessage("/document.edit", message);
     }
 
     private JPanel createHorizontalSection(JComponent... components) {
