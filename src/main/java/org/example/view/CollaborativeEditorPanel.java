@@ -19,10 +19,8 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
-    private final DocumentInfo documentInfo;
 
     public CollaborativeEditorPanel(DocumentInfo documentInfo) {
-        this.documentInfo = documentInfo;
         setLayout(new BorderLayout());
 
         // === Left Sidebar ===
@@ -105,9 +103,14 @@ public class CollaborativeEditorPanel extends JPanel {
         activeUsersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JList<String> userList = new JList<>(
-                documentInfo.getActiveUsers().entrySet()
+                documentInfo.getActiveUsers()
                         .stream()
-                        .map(entry -> entry.getKey() + " -> " + entry.getValue().toString())
+                        .map(user ->
+                                "ID: " + user.getUserId() +
+                                        ", Role: " + user.getRole() +
+                                        ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-") +
+                                        ", Connected: " + user.isConnected()
+                        )
                         .toArray(String[]::new)
         );
 
@@ -120,7 +123,7 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(userScroll);
 
         // === Editor Area ===
-        textArea = new JTextArea("hello");
+        textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
 

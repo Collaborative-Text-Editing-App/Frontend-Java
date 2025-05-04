@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -92,6 +93,50 @@ public class CollaborativeEditorService {
                 System.out.println("Raw JSON response: " + response);
                 // Deserialize JSON response into DocumentInfo
                 Gson gson = new Gson(); // or Jackson's ObjectMapper
+                DocumentInfo info = gson.fromJson(response, DocumentInfo.class);
+
+                webSocketService = new WebSocketService(info.getId());
+                webSocketService.connect();
+
+                return info;
+            } catch (Exception e) {
+                System.err.println("Exception while reading/parsing backend response:");
+                e.printStackTrace();
+            }
+        } else {
+            System.err.println("RESPONSE IS NOT 200");
+            throw new IOException("Server returned status: " + status);
+        }
+        return null;
+    }
+
+    public DocumentInfo importDoc(String content) throws IOException {
+        URL url = new URL("http://localhost:8080/api/documents/import");
+        System.out.println("test1");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setDoOutput(true);
+
+        // Prepare the JSON body.
+        String requestBody = "{\"content\":" + new Gson().toJson(content) + "}";
+
+        // Send the body.
+        try (OutputStream os = con.getOutputStream()) {
+            byte[] input = requestBody.getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        int status = con.getResponseCode();
+        System.out.println("THE STATUS IS OF THE HTTP CONNECTION : " + status);
+        if (status == 200) {
+            try (InputStream in = con.getInputStream();
+                 InputStreamReader reader = new InputStreamReader(in);
+                 BufferedReader br = new BufferedReader(reader)) {
+                System.out.println("Reading raw response...");
+                String response = br.lines().collect(Collectors.joining());
+                System.out.println("Raw JSON response: " + response);
+                Gson gson = new Gson();
                 DocumentInfo info = gson.fromJson(response, DocumentInfo.class);
 
                 webSocketService = new WebSocketService(info.getId());

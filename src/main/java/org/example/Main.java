@@ -30,7 +30,7 @@ public class Main {
 
         // Create and show home screen
         SwingUtilities.invokeLater(() -> {
-            HomeScreenPanel homeScreenPanel = new HomeScreenPanel(controller, webSocketService);
+            HomeScreenPanel homeScreenPanel = new HomeScreenPanel(controller);
             homeScreenPanel.pack();
             homeScreenPanel.setLocationRelativeTo(null);
             homeScreenPanel.setVisible(true);
