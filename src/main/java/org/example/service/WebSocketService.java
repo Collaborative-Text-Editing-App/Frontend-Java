@@ -24,18 +24,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WebSocketService {
     private static final String WS_URL = "http://localhost:8080/editor-websocket";
-    private static final String TEST_DOCUMENT_ID = "test-doc-123"; // Hardcoded ID for testing
     private StompSession stompSession;
     private StompSessionHandler messageHandler;
     private final String documentId;
+    private final String userId;
+    private final BlockingQueue<DocumentUpdateMessage> documentUpdates = new LinkedBlockingQueue<>();
 
     public WebSocketService(String documentId) {
-        this.documentId = documentId;
-    }
-
-    public WebSocketService() {
         this.userId = UUID.randomUUID().toString();
-        this.documentId = TEST_DOCUMENT_ID; // Set hardcoded ID for testing
+        this.documentId = documentId;
     }
 
     public void connect() {
@@ -96,11 +93,9 @@ public class WebSocketService {
             System.err.println("Not connected to WebSocket server");
         }
     }
-
     public String getUserId() {
         return userId;
     }
-
     public String getDocumentId() {
         return documentId;
     }

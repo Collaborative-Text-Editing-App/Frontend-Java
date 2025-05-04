@@ -1,8 +1,7 @@
 package org.example.view;
 
+import org.example.controller.CollaborativeEditorController;
 import org.example.model.DocumentInfo;
-import org.example.service.WebSocketService;
-import org.example.dto.TextOperationMessage;
 import org.example.dto.DocumentUpdateMessage;
 
 import javax.swing.*;
@@ -10,10 +9,6 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.io.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URI;
 
 import static org.example.view.styling.UIStyle.styleButton;
 import static org.example.view.styling.UIStyle.styleTextField;
@@ -26,12 +21,11 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
     private final DocumentInfo documentInfo;
-    private final WebSocketService webSocketService;
     private boolean isRemoteUpdate = false;
-    public CollaborativeEditorPanel(DocumentInfo documentInfo, WebSocketService webSocketService) {
+    private final CollaborativeEditorController controller;
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
-    
-        this.webSocketService = webSocketService;
+        this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());
 
         // Request initial document state
@@ -40,7 +34,7 @@ public class CollaborativeEditorPanel extends JPanel {
         // Start a thread to handle document updates
         new Thread(() -> {
             while (true) {
-                DocumentUpdateMessage update = webSocketService.getNextDocumentUpdate();
+                DocumentUpdateMessage update = this.controller.getDocumentUpdates();
                 System.out.println("Received update: " + update);
                 if (update != null) {
                     SwingUtilities.invokeLater(() -> {
@@ -74,18 +68,9 @@ public class CollaborativeEditorPanel extends JPanel {
         styleButton(redoButton);
         styleButton(exportButton);
 
-        undoButton.addActionListener(e -> {
-            TextOperationMessage undoMsg = new TextOperationMessage();
-            System.out.println("Sending undo message");
-            undoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
-            webSocketService.sendMessage("/document/undo", undoMsg);
-        });
+        undoButton.addActionListener(e -> controller.undoAction());
 
-        redoButton.addActionListener(e -> {
-            TextOperationMessage redoMsg = new TextOperationMessage();
-            redoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
-            webSocketService.sendMessage("/document/redo", redoMsg);
-        });
+        redoButton.addActionListener(e -> controller.redoAction());
 
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -182,16 +167,8 @@ public class CollaborativeEditorPanel extends JPanel {
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
 
-                    for (int i = 0; i < newText.length(); i++) {
-                        TextOperationMessage message = new TextOperationMessage();
-                        message.setOperationType("INSERT");
-                        message.setPosition(offset + i);
-                        message.setCharacter(newText.charAt(i));
-                        message.setUserId(webSocketService.getUserId());
-                        message.setDocumentId("test-doc-123");
+                    controller.insertText(newText, offset);
 
-                        webSocketService.sendMessage("/document.edit", message);
-                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -204,17 +181,8 @@ public class CollaborativeEditorPanel extends JPanel {
                 }
                 try {
                     int offset = e.getOffset();
-                    int length = e.getLength();
-                    
-                    // Create and send deletion message
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("DELETE");
-                    message.setPosition(offset);
-                    message.setUserId(webSocketService.getUserId());
-                    message.setDocumentId(webSocketService.getDocumentId());
-                    
-                    // Send to the correct endpoint for CRDT operations
-                    webSocketService.sendMessage("/document.edit", message);
+                    controller.removeText(offset);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -239,11 +207,7 @@ public class CollaborativeEditorPanel extends JPanel {
 
     private void requestInitialDocumentState() {
         // Send a request to get the current document state
-        TextOperationMessage message = new TextOperationMessage();
-        message.setOperationType("GET_STATE");
-        message.setUserId(webSocketService.getUserId());
-        message.setDocumentId(webSocketService.getDocumentId());
-        webSocketService.sendMessage("/document.edit", message);
+        controller.requestInitialText();
     }
 
     private JPanel createHorizontalSection(JComponent... components) {
@@ -296,8 +260,4 @@ public class CollaborativeEditorPanel extends JPanel {
         }
     }
 
-    // TODO:: CREATE THIS FUNCTION TO SET THE INITIAL CONTENT OF THE DOC FROM AN IMPORTANT FILE
-    public void setInitialContent(String name, String content) {
-
-    }
 }
