@@ -158,7 +158,6 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(userScroll);
 
         // === Editor Area ===
-        textArea = new JTextArea("");
         textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
