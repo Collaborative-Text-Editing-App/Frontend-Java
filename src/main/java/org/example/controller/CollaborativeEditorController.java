@@ -161,7 +161,7 @@ public class CollaborativeEditorController {
 
             SwingUtilities.invokeLater(() -> {
                 // Pass WebSocketService into the editor panel
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);
