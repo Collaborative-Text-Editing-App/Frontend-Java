@@ -168,24 +168,22 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                if (isRemoteUpdate) {
-                    return;
-                }
+                if (isRemoteUpdate) return;
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
-                    
-                    // Create and send insertion message
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("INSERT");
-                    message.setPosition(offset);
-                    message.setCharacter(newText.charAt(0));
-                    message.setUserId(webSocketService.getUserId());
-                    message.setDocumentId("test-doc-123");
-                    
-                    // Send to the correct endpoint for CRDT operations
-                    webSocketService.sendMessage("/document.edit", message);
+
+                    for (int i = 0; i < newText.length(); i++) {
+                        TextOperationMessage message = new TextOperationMessage();
+                        message.setOperationType("INSERT");
+                        message.setPosition(offset + i);
+                        message.setCharacter(newText.charAt(i));
+                        message.setUserId(webSocketService.getUserId());
+                        message.setDocumentId("test-doc-123");
+
+                        webSocketService.sendMessage("/document.edit", message);
+                    }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
