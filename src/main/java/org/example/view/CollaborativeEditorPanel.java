@@ -198,9 +198,7 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                if (isRemoteUpdate) {
-                    return;
-                }
+                if (isRemoteUpdate) return;
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
