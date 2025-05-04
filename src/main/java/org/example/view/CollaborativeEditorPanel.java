@@ -9,6 +9,10 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.io.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
 
 import static org.example.view.styling.UIStyle.styleButton;
 import static org.example.view.styling.UIStyle.styleTextField;
@@ -65,6 +69,19 @@ public class CollaborativeEditorPanel extends JPanel {
         styleButton(undoButton);
         styleButton(redoButton);
         styleButton(exportButton);
+
+        undoButton.addActionListener(e -> {
+            TextOperationMessage undoMsg = new TextOperationMessage();
+            System.out.println("Sending undo message");
+            undoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
+            webSocketService.sendMessage("/document/undo", undoMsg);
+        });
+
+        redoButton.addActionListener(e -> {
+            TextOperationMessage redoMsg = new TextOperationMessage();
+            redoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
+            webSocketService.sendMessage("/document/redo", redoMsg);
+        });
 
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
