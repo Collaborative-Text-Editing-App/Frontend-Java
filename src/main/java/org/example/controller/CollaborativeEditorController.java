@@ -114,6 +114,7 @@ public class CollaborativeEditorController {
     public void undoAction(){
         TextOperationMessage undoMsg = new TextOperationMessage();
         undoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        undoMsg.setUserId(collaborationService.getWebSocketService().getUserId());
         collaborationService.getWebSocketService().sendMessage("/app/document/undo", undoMsg);
 
     }
@@ -121,6 +122,7 @@ public class CollaborativeEditorController {
     public void redoAction(){
         TextOperationMessage redoMsg = new TextOperationMessage();
         redoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        redoMsg.setUserId(collaborationService.getWebSocketService().getUserId());
         collaborationService.getWebSocketService().sendMessage("/app/document/redo", redoMsg);
     }
 
