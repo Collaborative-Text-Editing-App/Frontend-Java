@@ -207,7 +207,7 @@ public class CollaborativeEditorPanel extends JPanel {
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
 
-                    controller.insertText(newText, offset);
+                    controller.insertText(newText, offset, isPaste, isTyping);
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
