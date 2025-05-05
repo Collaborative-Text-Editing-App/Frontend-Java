@@ -7,7 +7,6 @@ public class User {
     private String id;
     private UserRole role;
     private Cursor cursor;
-    private boolean connected;
     private Timestamp lastSeen;
 
     public User() {
@@ -42,13 +41,6 @@ public class User {
         this.cursor = cursor;
     }
 
-    public boolean isConnected() {
-        return connected;
-    }
-
-    public void setConnected(boolean connected) {
-        this.connected = connected;
-    }
 
     public Timestamp getLastSeen() {
         return lastSeen;

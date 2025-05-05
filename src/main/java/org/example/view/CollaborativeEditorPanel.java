@@ -54,7 +54,7 @@ public class CollaborativeEditorPanel extends JPanel {
             });
         }
     }
-    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, UserRole role, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
         this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());

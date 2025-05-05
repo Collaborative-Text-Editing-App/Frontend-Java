@@ -39,11 +39,8 @@ public class WebSocketService {
         this.userId = UUID.randomUUID().toString();
         this.documentId = documentId;
     }
-    public void notifyActiveUsers(UserRole userRole) {
+    public void notifyActiveUsers(User user) {
         if (stompSession != null && stompSession.isConnected()) {
-            User user = new User();
-            user.setRole(userRole);
-            user.setId(this.userId);
             UserJoinedMessage message = new UserJoinedMessage(user, this.documentId);
             stompSession.send("/app/join", message);  // or wrap in a JoinMessage
         } else {
