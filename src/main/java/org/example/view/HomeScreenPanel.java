@@ -4,6 +4,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import org.example.service.WebSocketService;
 import org.example.controller.CollaborativeEditorController;
@@ -50,8 +52,16 @@ public class HomeScreenPanel extends JFrame {
                 File selected = fileChooser.getSelectedFile();
                 if (selected != null && selected.getName().toLowerCase().endsWith(".txt")) {
                     try {
-                        String content = Files.readString(selected.toPath());
+                        String content = Files.readString(selected.toPath(), StandardCharsets.UTF_8);
                         controller.openImportedDocument(content);
+                    } catch (MalformedInputException ex) {
+                        // Try UTF-16 as fallback
+                        try {
+                            String content = Files.readString(selected.toPath(), StandardCharsets.UTF_16);
+                            controller.openImportedDocument(content);
+                        } catch (IOException e2) {
+                            showError("Failed to read file: not a valid UTF-8/UTF-16 text file.");
+                        }
                     } catch (IOException ioEx) {
                         showError("Failed to read file: " + ioEx.getMessage());
                     }

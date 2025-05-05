@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import org.example.dto.DocumentUpdateMessage;
+import org.example.dto.JoinDocumentResponse;
 import org.example.dto.TextOperationMessage;
 import org.example.model.DocumentInfo;
 import org.example.service.CollaborativeEditorService;
@@ -210,7 +211,6 @@ public class CollaborativeEditorController {
     public void openImportedDocument(String content) {
         try {
             DocumentInfo documentInfo = collaborationService.importDoc(content);
-
             SwingUtilities.invokeLater(() -> {
                 // Pass WebSocketService into the editor panel
                 CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
@@ -235,10 +235,10 @@ public class CollaborativeEditorController {
 
     public void joinDoc(String code) {
         try {
-            DocumentInfo documentInfo = collaborationService.joinDocumentWithCode(code);
+            JoinDocumentResponse joinResponse = collaborationService.joinDocumentWithCode(code);
             SwingUtilities.invokeLater(() -> {
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
-                JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(joinResponse.getDocument(), this);
+                JFrame editorFrame = new JFrame("Collaborative Editor - " + joinResponse.getDocument().getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);
                 editorFrame.pack();
