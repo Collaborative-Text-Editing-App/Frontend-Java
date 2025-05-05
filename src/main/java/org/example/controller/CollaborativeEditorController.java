@@ -78,7 +78,8 @@ public class CollaborativeEditorController {
                 message.setOperationType("DELETE");
                 message.setPosition(offset);
                 message.setUserId(collaborationService.getWebSocketService().getUserId());
-                message.setLength(length);  
+                message.setLength(length);
+                message.setTextLength(length);
                 message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
             } else {
