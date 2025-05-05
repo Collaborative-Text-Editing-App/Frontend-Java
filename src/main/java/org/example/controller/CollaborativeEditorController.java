@@ -1,8 +1,6 @@
 package org.example.controller;
 
-import org.example.dto.DocumentUpdateMessage;
-import org.example.dto.JoinDocumentResponse;
-import org.example.dto.TextOperationMessage;
+import org.example.dto.*;
 import org.example.model.DocumentInfo;
 import org.example.service.CollaborativeEditorService;
 import org.example.service.WebSocketService;
@@ -26,9 +24,14 @@ public class CollaborativeEditorController {
         this.homeScreen = homeScreen;
         setupMessageHandler();
     }
-
+    public void handleClose(){
+        collaborationService.getWebSocketService().disconnect();
+    }
     public DocumentUpdateMessage getDocumentUpdates(){
         return this.collaborationService.getWebSocketService().getNextDocumentUpdate();
+    }
+    public UserUpdateMessage getUserJoinedUpdates(){
+        return this.collaborationService.getWebSocketService().getJoinedUsers();
     }
 
     public void insertText(String newText, int offset, boolean isPaste, boolean isTyping) {
