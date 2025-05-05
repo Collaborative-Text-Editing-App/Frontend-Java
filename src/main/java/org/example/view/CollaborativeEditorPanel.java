@@ -11,9 +11,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.io.*;
 import java.util.List;
 
@@ -37,7 +35,23 @@ public class CollaborativeEditorPanel extends JPanel {
 
     private DefaultListModel<String> userListModel;
     private JList<String> userList;
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        // Get the parent JFrame
+        JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
 
+        if (parentFrame != null) {
+            // Add window listener to the JFrame
+            parentFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    System.out.println("CollaborativeEditorPanel is closing from inside the panel (using addNotify).");
+                    controller.handleClose();
+                }
+            });
+        }
+    }
     public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
         this.controller = collaborativeEditorController;
@@ -275,9 +289,12 @@ public class CollaborativeEditorPanel extends JPanel {
     }
 
     private String formatUser(User user) {
-        return "ID: " + user.getId() +
+        String id = "";
+        if (user != null && user.getId() != null) {
+            id =  user.getId().substring(0, 4);
+        }
+        return "ID: " + id +
                 ", Role: " + user.getRole() +
-                ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-") +
-                ", Connected: " + user.isConnected();
+                ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-");
     }
 }

@@ -51,6 +51,17 @@ public class WebSocketService {
         }
     }
 
+    public void notifyUserLeft() {
+        if (stompSession != null && stompSession.isConnected()) {
+            User user = new User();
+            user.setId(this.userId);
+            UserJoinedMessage message = new UserJoinedMessage(user, this.documentId);
+            stompSession.send("/app/leave", message);  // or wrap in a JoinMessage
+        } else {
+            System.err.println("WebSocket not connected");
+        }
+    }
+
     public void connect() {
         List<Transport> transports = new ArrayList<>();
         transports.add(new WebSocketTransport(new StandardWebSocketClient()));
@@ -110,6 +121,7 @@ public class WebSocketService {
 
     public void disconnect() {
         if (stompSession != null && stompSession.isConnected()) {
+            this.notifyUserLeft();
             stompSession.disconnect();
             System.out.println("Disconnected from WebSocket server");
         }

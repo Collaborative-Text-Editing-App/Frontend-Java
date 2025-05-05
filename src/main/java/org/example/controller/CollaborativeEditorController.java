@@ -24,7 +24,9 @@ public class CollaborativeEditorController {
         this.homeScreen = homeScreen;
         setupMessageHandler();
     }
-
+    public void handleClose(){
+        collaborationService.getWebSocketService().disconnect();
+    }
     public DocumentUpdateMessage getDocumentUpdates(){
         return this.collaborationService.getWebSocketService().getNextDocumentUpdate();
     }
