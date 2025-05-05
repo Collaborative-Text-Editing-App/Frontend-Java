@@ -14,7 +14,6 @@ import java.util.List;
 public class CollaborativeEditorController {
 
     private final CollaborativeEditorService collaborationService;
-    private JTextArea textArea;
     private final List<String> activeUsers;
     private String viewerCode;
     private String editorCode;
@@ -23,7 +22,7 @@ public class CollaborativeEditorController {
         this.collaborationService = new CollaborativeEditorService(host, port);
         this.activeUsers = new ArrayList<>();
         this.homeScreen = homeScreen;
-        setupMessageHandler();
+        //setupMessageHandler();
     }
 
     public DocumentUpdateMessage getDocumentUpdates(){
@@ -76,19 +75,17 @@ public class CollaborativeEditorController {
         // Send to the endpoint for CRDT operations
         collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
     }
-    public void setTextArea(JTextArea textArea) {
-        this.textArea = textArea;
-    }
 
-    private void setupMessageHandler() {
-        collaborationService.setOnMessageReceived(message -> {
-            if (message.startsWith("TEXT:")) {
-                updateText(message.substring(5));
-            } else if (message.startsWith("USERS:")) {
-                updateActiveUsers(message.substring(6));
-            }
-        });
-    }
+
+//    private void setupMessageHandler() {
+//        collaborationService.setOnMessageReceived(message -> {
+//            if (message.startsWith("TEXT:")) {
+//                updateText(message.substring(5));
+//            } else if (message.startsWith("USERS:")) {
+//                updateActiveUsers(message.substring(6));
+//            }
+//        });
+//    }
 
     public void sendTextUpdate(String text) {
 //        if (collaborationService.isConnected()) {
@@ -96,11 +93,11 @@ public class CollaborativeEditorController {
 //        }
     }
 
-    private void updateText(String newText) {
-        if (textArea != null) {
-            SwingUtilities.invokeLater(() -> textArea.setText(newText));
-        }
-    }
+//    private void updateText(String newText) {
+//        if (textArea != null) {
+//            SwingUtilities.invokeLater(() -> textArea.setText(newText));
+//        }
+//    }
 
     private void updateActiveUsers(String usersList) {
         String[] users = usersList.split(",");
