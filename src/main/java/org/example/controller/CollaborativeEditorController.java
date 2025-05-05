@@ -8,6 +8,7 @@ import org.example.service.WebSocketService;
 import org.example.view.CollaborativeEditorPanel;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,7 +71,13 @@ public class CollaborativeEditorController {
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", charMessage);
             }
         }
-        SwingUtilities.invokeLater(() -> sendCursorUpdate(textArea.getCaretPosition()));
+        SwingUtilities.invokeLater(() -> {
+            try {
+                sendCursorUpdate(textArea.getLineOfOffset(offset));
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void removeText(int offset, int length) {
@@ -116,7 +123,13 @@ public class CollaborativeEditorController {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(() -> sendCursorUpdate(textArea.getCaretPosition()));
+        SwingUtilities.invokeLater(() -> {
+            try {
+                sendCursorUpdate(textArea.getLineOfOffset(offset));
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void requestInitialText(){

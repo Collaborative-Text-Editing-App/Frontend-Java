@@ -11,9 +11,11 @@ import org.example.dto.TextOperationMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
+import java.awt.geom.Rectangle2D;
 import java.io.*;
 import java.util.List;
 
@@ -102,6 +104,7 @@ public class CollaborativeEditorPanel extends JPanel {
 
         undoButton.addActionListener(e -> controller.undoAction());
         redoButton.addActionListener(e -> controller.redoAction());
+
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Text Files", "txt"));
@@ -176,10 +179,12 @@ public class CollaborativeEditorPanel extends JPanel {
         updateUserList(documentInfo.getActiveUsers());
 
         // === Editor Area ===
+
         textArea = new JTextArea(documentInfo.getContent());
         controller.setTextArea(textArea);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         textArea.setEditable(role == UserRole.EDITOR);  // This disables editing for VIEWER
+        textArea.setLineWrap(true);
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
@@ -197,6 +202,24 @@ public class CollaborativeEditorPanel extends JPanel {
             }
         });
 
+//        textArea.addCaretListener(e -> {
+//            SwingUtilities.invokeLater(() -> {
+//                try {
+//                    int caretPosition = textArea.getCaretPosition();
+//                    Rectangle2D r = textArea.modelToView2D(caretPosition);
+//                    if (r != null) {
+//                        int lineHeight = textArea.getFontMetrics(textArea.getFont()).getHeight();
+//                        int visualLine = (int)(r.getY() / lineHeight);
+//                        controller.sendCursorUpdate(visualLine);
+//                    } else {
+//                        int logicalLine = textArea.getLineOfOffset(caretPosition);
+//                        controller.sendCursorUpdate(logicalLine);
+//                    }
+//                } catch (BadLocationException ex) {
+//                    ex.printStackTrace();
+//                }
+//            });
+//        });
         // Typing detection
         textArea.addKeyListener(new KeyAdapter() {
             @Override
@@ -314,6 +337,7 @@ public class CollaborativeEditorPanel extends JPanel {
         }
         return "ID: " + id +
                 ", Role: " + user.getRole() +
-                ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-");
+                ", Cursor: Line " + (user.getCursor() != null ? user.getCursor().getPosition() + 1: "-") +
+                ", Color :" + (user.getCursor().getColor());
     }
 }
