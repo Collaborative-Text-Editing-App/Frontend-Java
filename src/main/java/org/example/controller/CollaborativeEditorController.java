@@ -8,6 +8,7 @@ import org.example.service.WebSocketService;
 import org.example.view.CollaborativeEditorPanel;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +34,15 @@ public class CollaborativeEditorController {
     }
     public UserUpdateMessage getUserJoinedUpdates(){
         return this.collaborationService.getWebSocketService().getJoinedUsers();
+    }
+
+    public void sendCursorUpdate(int position) {
+        CursorUpdateMessage msg = new CursorUpdateMessage();
+        msg.setUserId(collaborationService.getWebSocketService().getUserId());
+        msg.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+        msg.setPosition(position);
+        // Optionally set color, if your client/frontend has a per-user color
+        collaborationService.getWebSocketService().sendMessage("/app/cursor.update", msg);
     }
 
     public void insertText(String newText, int offset, boolean isPaste, boolean isTyping) {
@@ -61,6 +71,13 @@ public class CollaborativeEditorController {
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", charMessage);
             }
         }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                sendCursorUpdate(textArea.getLineOfOffset(offset));
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void removeText(int offset, int length) {
@@ -106,6 +123,13 @@ public class CollaborativeEditorController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                sendCursorUpdate(textArea.getLineOfOffset(offset));
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void requestInitialText(){
