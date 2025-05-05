@@ -8,6 +8,7 @@ public class TextOperationMessage {
     private int position;
     private String nodeId;
     private int length;
+    private int textLength;
 
     public String getDocumentId() {
         return documentId;
@@ -51,6 +52,14 @@ public class TextOperationMessage {
 
     public void setLength(int length) {
         this.length = length;
+    }   
+
+    public int getTextLength() {
+        return textLength;
+    }
+
+    public void setTextLength(int textLength) {
+        this.textLength = textLength;
     }   
 
     public void setPosition(int position) {

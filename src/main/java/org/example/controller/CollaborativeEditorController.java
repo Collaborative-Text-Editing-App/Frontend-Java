@@ -63,41 +63,47 @@ public class CollaborativeEditorController {
     }
 
     public void removeText(int offset, int length) {
+        if (textArea == null) {
+            System.err.println("TextArea is not initialized");
+            return;
+        }
+        
         try {
-            String deletedText = textArea.getText(offset, length);
+            System.out.println("Removing text at offset: " + offset + " with length: " + length);
                     
             if (length == 1) {
                 // Single character deletion (backspace or delete key)
                 TextOperationMessage message = new TextOperationMessage();
                 message.setOperationType("DELETE");
                 message.setPosition(offset);
-                message.setText(deletedText);
                 message.setUserId(collaborationService.getWebSocketService().getUserId());
                 message.setLength(length);  
                 message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
             } else {
                 // Multiple characters deletion (selection)
-                List<TextOperationMessage> deleteOperations = new ArrayList<>();
-                for (int i = 0; i < length; i++) {
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("DELETE");
-                    message.setPosition(offset + i);
-                    message.setText(String.valueOf(deletedText.charAt(i)));
-                    message.setUserId(collaborationService.getWebSocketService().getUserId());
-                    message.setLength(length);
-                    message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
-                    deleteOperations.add(message);
-                }
+                System.out.println("Multiple characters deletion (selection)");
+                //List<TextOperationMessage> deleteOperations = new ArrayList<>();
+                System.out.println("Deleting " + length + " characters at offset " + offset);
+                TextOperationMessage message = new TextOperationMessage();
+                message.setOperationType("DELETE");
+                message.setPosition(offset);
+                message.setUserId(collaborationService.getWebSocketService().getUserId());
+                message.setLength(1);       
+                message.setTextLength(length);
+                message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+                //deleteOperations.add(message);
                 // Send all delete operations as a batch
-                for (TextOperationMessage op : deleteOperations) {
-                    collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
-                }
+                System.out.println("Sending message: " + message);
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+                System.out.println("Message sent");
+
+                // for (TextOperationMessage op : deleteOperations) {
+                // }
             }
-        } catch (javax.swing.text.BadLocationException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
- 
     }
 
     public void requestInitialText(){
@@ -111,6 +117,7 @@ public class CollaborativeEditorController {
     public void undoAction(){
         TextOperationMessage undoMsg = new TextOperationMessage();
         undoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        undoMsg.setUserId(collaborationService.getWebSocketService().getUserId());
         collaborationService.getWebSocketService().sendMessage("/app/document/undo", undoMsg);
 
     }
@@ -118,6 +125,7 @@ public class CollaborativeEditorController {
     public void redoAction(){
         TextOperationMessage redoMsg = new TextOperationMessage();
         redoMsg.setDocumentId(collaborationService.getWebSocketService().getDocumentId()); // or get from webSocketService
+        redoMsg.setUserId(collaborationService.getWebSocketService().getUserId());
         collaborationService.getWebSocketService().sendMessage("/app/document/redo", redoMsg);
     }
 

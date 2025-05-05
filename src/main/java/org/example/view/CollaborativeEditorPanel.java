@@ -6,6 +6,7 @@ import org.example.dto.UserUpdateMessage;
 import org.example.model.DocumentInfo;
 import org.example.dto.DocumentUpdateMessage;
 import org.example.model.User;
+import org.example.dto.TextOperationMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -170,12 +171,16 @@ public class CollaborativeEditorPanel extends JPanel {
 
         // === Editor Area ===
         textArea = new JTextArea(documentInfo.getContent());
+        controller.setTextArea(textArea);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
-
-        // Paste detection
+        
+        // Set the textArea in the controller
+        controller.setTextArea(textArea);
+        
+        // Add key bindings for paste
         textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
         textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
             @Override
@@ -222,6 +227,7 @@ public class CollaborativeEditorPanel extends JPanel {
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
+                    //String deletedText = textArea.getText(offset, length);
                     controller.removeText(offset, length);
                 } catch (Exception ex) {
                     ex.printStackTrace();
