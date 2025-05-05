@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
+import org.example.model.UserRole;
 
 
 public class CollaborativeEditorService {
@@ -99,6 +100,7 @@ public class CollaborativeEditorService {
 
                 webSocketService = new WebSocketService(info.getId());
                 webSocketService.connect();
+                webSocketService.notifyActiveUsers(UserRole.EDITOR);
 
                 return info;
             } catch (Exception e) {
@@ -182,8 +184,11 @@ public class CollaborativeEditorService {
                 Gson gson = new Gson(); // or Jackson's ObjectMapper
                 JoinDocumentResponse joinResponse = gson.fromJson(response, JoinDocumentResponse.class);
                 if (joinResponse.getDocument() != null) {
+                    DocumentInfo document = joinResponse.getDocument();
+                    UserRole role = code.equals(document.getEditorCode()) ? UserRole.EDITOR : UserRole.VIEWER;
                     webSocketService = new WebSocketService(joinResponse.getDocument().getId());
                     webSocketService.connect();
+                    webSocketService.notifyActiveUsers(role);
                 }
                 return joinResponse;
             } catch (Exception e) {

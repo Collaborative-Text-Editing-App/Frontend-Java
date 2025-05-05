@@ -1,5 +1,9 @@
 package org.example.service;
 
+import org.example.dto.UserJoinedMessage;
+import org.example.dto.UserUpdateMessage;
+import org.example.model.User;
+import org.example.model.UserRole;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
@@ -29,10 +33,33 @@ public class WebSocketService {
     private final String documentId;
     private final String userId;
     private final BlockingQueue<DocumentUpdateMessage> documentUpdates = new LinkedBlockingQueue<>();
+    private final BlockingQueue<UserUpdateMessage> userUpdates = new LinkedBlockingQueue<>();
 
     public WebSocketService(String documentId) {
         this.userId = UUID.randomUUID().toString();
         this.documentId = documentId;
+    }
+    public void notifyActiveUsers(UserRole userRole) {
+        if (stompSession != null && stompSession.isConnected()) {
+            User user = new User();
+            user.setRole(userRole);
+            user.setId(this.userId);
+            UserJoinedMessage message = new UserJoinedMessage(user, this.documentId);
+            stompSession.send("/app/join", message);  // or wrap in a JoinMessage
+        } else {
+            System.err.println("WebSocket not connected");
+        }
+    }
+
+    public void notifyUserLeft() {
+        if (stompSession != null && stompSession.isConnected()) {
+            User user = new User();
+            user.setId(this.userId);
+            UserJoinedMessage message = new UserJoinedMessage(user, this.documentId);
+            stompSession.send("/app/leave", message);  // or wrap in a JoinMessage
+        } else {
+            System.err.println("WebSocket not connected");
+        }
     }
 
     public void connect() {
@@ -48,8 +75,21 @@ public class WebSocketService {
             public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
                 System.out.println("Connected to WebSocket server for document: " + documentId);
                 // Subscribe to document-specific updates
-//                session.subscribe("/topic/documents/" + documentId + "/text-updates", this);
-//                session.subscribe("/topic/documents/" + documentId + "/user-list", this);
+                session.subscribe("/topic/users/" + documentId , new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return UserUpdateMessage.class;
+                    }
+
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        System.out.println("Received frame with payload: " + payload);
+                        if (payload instanceof UserUpdateMessage update) {
+                            userUpdates.offer(update);
+                        } else {
+                            System.out.println("Unexpected payload type: " + payload.getClass());
+                        }
+                    }
+                });
                 session.subscribe("/topic/document/" + documentId, new StompFrameHandler() {
                     @Override
                     public Type getPayloadType(StompHeaders headers) {
@@ -81,6 +121,7 @@ public class WebSocketService {
 
     public void disconnect() {
         if (stompSession != null && stompSession.isConnected()) {
+            this.notifyUserLeft();
             stompSession.disconnect();
             System.out.println("Disconnected from WebSocket server");
         }
@@ -104,6 +145,15 @@ public class WebSocketService {
         try {
             return documentUpdates.take();
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+    }
+    public UserUpdateMessage getJoinedUsers(){
+        try{
+            return userUpdates.take();
+        }
+        catch (InterruptedException e){
             Thread.currentThread().interrupt();
             return null;
         }

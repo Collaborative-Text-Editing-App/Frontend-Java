@@ -1,33 +1,30 @@
 package org.example.view;
 
 import org.example.controller.CollaborativeEditorController;
+import org.example.dto.UserJoinedMessage;
+import org.example.dto.UserUpdateMessage;
 import org.example.model.DocumentInfo;
 import org.example.dto.DocumentUpdateMessage;
 import org.example.model.UserRole;
+import org.example.model.User;
+import org.example.dto.TextOperationMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.*;
 import java.io.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URI;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.example.view.styling.UIStyle.styleButton;
 import static org.example.view.styling.UIStyle.styleTextField;
 
 public class CollaborativeEditorPanel extends JPanel {
-    
+
     private final Font labelFont = new Font("Arial", Font.BOLD, 14);
     private final Font textFont = new Font("Arial", Font.PLAIN, 14);
-    private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
+    private final Color primaryColor = new Color(70, 130, 180);
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
     private final DocumentInfo documentInfo;
@@ -36,21 +33,38 @@ public class CollaborativeEditorPanel extends JPanel {
     private boolean isPaste = false;
     private boolean isTyping = false;
     private long lastTypingTime = 0;
-    private static final long TYPING_THRESHOLD = 100; // milliseconds between keystrokes
+    private static final long TYPING_THRESHOLD = 100;
 
-    public CollaborativeEditorPanel(DocumentInfo documentInfo, UserRole role, CollaborativeEditorController collaborativeEditorController) {
+    private DefaultListModel<String> userListModel;
+    private JList<String> userList;
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        // Get the parent JFrame
+        JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+
+        if (parentFrame != null) {
+            // Add window listener to the JFrame
+            parentFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    System.out.println("CollaborativeEditorPanel is closing from inside the panel (using addNotify).");
+                    controller.handleClose();
+                }
+            });
+        }
+    }
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
         this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());
 
-        // Request initial document state
         requestInitialDocumentState();
-        
-        // Start a thread to handle document updates
+
+        // Thread to handle remote text updates
         new Thread(() -> {
             while (true) {
                 DocumentUpdateMessage update = this.controller.getDocumentUpdates();
-                System.out.println("Received update: " + update);
                 if (update != null) {
                     SwingUtilities.invokeLater(() -> {
                         if (!textArea.getText().equals(update.getContent())) {
@@ -63,13 +77,22 @@ public class CollaborativeEditorPanel extends JPanel {
             }
         }).start();
 
+        // Thread to handle user list updates
+        new Thread(() -> {
+            while (true) {
+                UserUpdateMessage update = this.controller.getUserJoinedUpdates();
+                if (update != null) {
+                    SwingUtilities.invokeLater(() -> updateUserList(update.getUsers()));
+                }
+            }
+        }).start();
+
         // === Left Sidebar ===
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setPreferredSize(new Dimension(400, 800));
-        leftPanel.setBorder(new EmptyBorder(20, 20, 20, 20)); // outer padding
+        leftPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Section 1: Edit Buttons
         JButton undoButton = new JButton("Undo");
         JButton redoButton = new JButton("Redo");
         JButton exportButton = new JButton("Export");
@@ -78,16 +101,13 @@ public class CollaborativeEditorPanel extends JPanel {
         styleButton(exportButton);
 
         undoButton.addActionListener(e -> controller.undoAction());
-
         redoButton.addActionListener(e -> controller.redoAction());
-
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Text Files", "txt"));
             int returnValue = fileChooser.showSaveDialog(this);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
-                // Ensure the file has .txt extension
                 if (!selectedFile.getName().toLowerCase().endsWith(".txt")) {
                     selectedFile = new File(selectedFile.getPath() + ".txt");
                 }
@@ -95,8 +115,7 @@ public class CollaborativeEditorPanel extends JPanel {
             }
         });
 
-        JPanel editSection = createHorizontalSection(undoButton, redoButton, exportButton);
-        leftPanel.add(editSection);
+        leftPanel.add(createHorizontalSection(undoButton, redoButton, exportButton));
         leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
 
@@ -140,38 +159,34 @@ public class CollaborativeEditorPanel extends JPanel {
             leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         }
 
-        // Section 4: Active Users
+        // Active Users (dynamic list)
         JLabel activeUsersLabel = new JLabel("Active Users");
         activeUsersLabel.setFont(labelFont);
         activeUsersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JList<String> userList = new JList<>(
-                documentInfo.getActiveUsers()
-                        .stream()
-                        .map(user ->
-                                "ID: " + user.getUserId() +
-                                        ", Role: " + user.getRole() +
-                                        ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-") +
-                                        ", Connected: " + user.isConnected()
-                        )
-                        .toArray(String[]::new)
-        );
-
+        userListModel = new DefaultListModel<>();
+        userList = new JList<>(userListModel);
         userList.setFont(textFont);
         JScrollPane userScroll = new JScrollPane(userList);
         userScroll.setPreferredSize(new Dimension(200, 100));
-
         leftPanel.add(activeUsersLabel);
         leftPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         leftPanel.add(userScroll);
 
+        // Populate initial user list
+        updateUserList(documentInfo.getActiveUsers());
+
         // === Editor Area ===
         textArea = new JTextArea(documentInfo.getContent());
+        controller.setTextArea(textArea);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         textArea.setEditable(role == UserRole.EDITOR);  // This disables editing for VIEWER
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
+        
+        // Set the textArea in the controller
+        controller.setTextArea(textArea);
+        
         // Add key bindings for paste
         textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
         textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
@@ -182,7 +197,7 @@ public class CollaborativeEditorPanel extends JPanel {
             }
         });
 
-        // Add key listener to detect typing
+        // Typing detection
         textArea.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -198,7 +213,7 @@ public class CollaborativeEditorPanel extends JPanel {
             }
         });
 
-        // Add text change listener to send updates to WebSocket
+        // Text update listener
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
@@ -207,9 +222,7 @@ public class CollaborativeEditorPanel extends JPanel {
                     int offset = e.getOffset();
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
-
                     controller.insertText(newText, offset, isPaste, isTyping);
-
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -217,14 +230,12 @@ public class CollaborativeEditorPanel extends JPanel {
 
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                if (isRemoteUpdate) {
-                    return;
-                }
+                if (isRemoteUpdate) return;
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
+                    //String deletedText = textArea.getText(offset, length);
                     controller.removeText(offset, length);
-
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -232,43 +243,33 @@ public class CollaborativeEditorPanel extends JPanel {
 
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                sendTextUpdate();
-            }
-
-            private void sendTextUpdate() {
-//                if (webSocketService != null) {
-//                    webSocketService.sendMessage("/app/text-update", textArea.getText());
-//                }
+                // Not needed for plain text components
             }
         });
 
-        // Add to main panel
         add(leftPanel, BorderLayout.WEST);
         add(textScroll, BorderLayout.CENTER);
     }
 
     private void requestInitialDocumentState() {
-        // Send a request to get the current document state
         controller.requestInitialText();
     }
 
     private JPanel createHorizontalSection(JComponent... components) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
-        panel.setBorder(new EmptyBorder(8, 8, 8, 8)); // internal padding
+        panel.setBorder(new EmptyBorder(8, 8, 8, 8));
         for (int i = 0; i < components.length; i++) {
             panel.add(components[i]);
             if (i < components.length - 1) {
-                panel.add(Box.createRigidArea(new Dimension(8, 0))); // spacing
+                panel.add(Box.createRigidArea(new Dimension(8, 0)));
             }
         }
         return panel;
     }
 
     private void copyToClipboard(String text) {
-        Toolkit.getDefaultToolkit()
-                .getSystemClipboard()
-                .setContents(new StringSelection(text), null);
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
     }
 
     public void exportToFile(File file) {
@@ -295,11 +296,24 @@ public class CollaborativeEditorPanel extends JPanel {
             }
             textArea.setText(content.toString());
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, 
-                "Error reading file: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error reading file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    private void updateUserList(List<User> users) {
+        userListModel.clear();
+        for (User user : users) {
+            userListModel.addElement(formatUser(user));
+        }
+    }
+
+    private String formatUser(User user) {
+        String id = "";
+        if (user != null && user.getId() != null) {
+            id =  user.getId().substring(0, 4);
+        }
+        return "ID: " + id +
+                ", Role: " + user.getRole() +
+                ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-");
+    }
 }
