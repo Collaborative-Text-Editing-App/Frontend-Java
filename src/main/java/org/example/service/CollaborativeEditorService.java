@@ -1,11 +1,13 @@
 package org.example.service;
 
+import org.example.dto.JoinDocumentResponse;
 import org.example.model.DocumentInfo;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -159,15 +161,39 @@ public class CollaborativeEditorService {
         return null;
     }
 
-    public DocumentInfo joinDocumentWithCode(String code) throws IOException {
-
-
-        // Dummy logic – replace with actual API call to resolve document ID from code
-        DocumentInfo info = new DocumentInfo(); // Fetch from server properly
-
-        webSocketService = new WebSocketService(info.getId());
-        webSocketService.connect();
-
-        return info;
+    public JoinDocumentResponse joinDocumentWithCode(String code) throws IOException {
+        String urlStr = "http://localhost:8080/api/documents/" + URLEncoder.encode(code, StandardCharsets.UTF_8);
+        URL url = new URL(urlStr);
+        System.out.println("test1");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setDoOutput(true);
+        int status = con.getResponseCode();
+        System.out.println("THE STATUS IS OF THE HTTP CONNECTION : " + status);
+        if (status == 200) {
+            try (InputStream in = con.getInputStream();
+                 InputStreamReader reader = new InputStreamReader(in);
+                 BufferedReader br = new BufferedReader(reader)) {
+                System.out.println("Reading raw response...");
+                String response = br.lines().collect(Collectors.joining());
+                System.out.println("Raw JSON response: " + response);
+                // Deserialize JSON response into DocumentInfo
+                Gson gson = new Gson(); // or Jackson's ObjectMapper
+                JoinDocumentResponse joinResponse = gson.fromJson(response, JoinDocumentResponse.class);
+                if (joinResponse.getDocument() != null) {
+                    webSocketService = new WebSocketService(joinResponse.getDocument().getId());
+                    webSocketService.connect();
+                }
+                return joinResponse;
+            } catch (Exception e) {
+                System.err.println("Exception while reading/parsing backend response:");
+                e.printStackTrace();
+            }
+        } else {
+            System.err.println("RESPONSE IS NOT 200");
+            throw new IOException("Server returned status: " + status);
+        }
+        return null;
     }
 } 
