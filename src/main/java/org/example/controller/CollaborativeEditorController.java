@@ -58,10 +58,7 @@ public class CollaborativeEditorController {
         }
     }
 
-    public void removeText(int offset, int length, JTextArea textArea) {
-        try {
-            String deletedText = textArea.getText(offset, length);
-                    
+    public void removeText(int offset, int length, String deletedText) {
             if (length == 1) {
                 // Single character deletion (backspace or delete key)
                 TextOperationMessage message = new TextOperationMessage();
@@ -90,9 +87,6 @@ public class CollaborativeEditorController {
                     collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
                 }
             }
-        } catch (javax.swing.text.BadLocationException e) {
-            e.printStackTrace();
-        }
  
     }
 
@@ -252,5 +246,9 @@ public class CollaborativeEditorController {
                 }
             });
         }
+    }
+
+    public void setTextArea(JTextArea textArea) {
+
     }
 }
