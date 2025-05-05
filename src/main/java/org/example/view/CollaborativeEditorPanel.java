@@ -228,8 +228,8 @@ public class CollaborativeEditorPanel extends JPanel {
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
-                    String deletedText = textArea.getText(offset, length);
-                    controller.removeText(offset, length, deletedText);
+                    //String deletedText = textArea.getText(offset, length);
+                    controller.removeText(offset, length);
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
