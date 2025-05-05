@@ -35,6 +35,15 @@ public class CollaborativeEditorController {
         return this.collaborationService.getWebSocketService().getJoinedUsers();
     }
 
+    public void sendCursorUpdate(int position) {
+        CursorUpdateMessage msg = new CursorUpdateMessage();
+        msg.setUserId(collaborationService.getWebSocketService().getUserId());
+        msg.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+        msg.setPosition(position);
+        // Optionally set color, if your client/frontend has a per-user color
+        collaborationService.getWebSocketService().sendMessage("/app/cursor.update", msg);
+    }
+
     public void insertText(String newText, int offset, boolean isPaste, boolean isTyping) {
         TextOperationMessage message = new TextOperationMessage();
         message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());  
@@ -61,6 +70,7 @@ public class CollaborativeEditorController {
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", charMessage);
             }
         }
+        SwingUtilities.invokeLater(() -> sendCursorUpdate(textArea.getCaretPosition()));
     }
 
     public void removeText(int offset, int length) {
@@ -105,6 +115,7 @@ public class CollaborativeEditorController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        SwingUtilities.invokeLater(() -> sendCursorUpdate(textArea.getCaretPosition()));
     }
 
     public void requestInitialText(){
