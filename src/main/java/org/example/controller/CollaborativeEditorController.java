@@ -60,29 +60,34 @@ public class CollaborativeEditorController {
     }
 
     public void removeText(int offset, int length) {
+        if (textArea == null) {
+            System.err.println("TextArea is not initialized");
+            return;
+        }
+        
         try {
-            String deletedText = textArea.getText(offset, length);
+            System.out.println("Removing text at offset: " + offset + " with length: " + length);
                     
             if (length == 1) {
                 // Single character deletion (backspace or delete key)
                 TextOperationMessage message = new TextOperationMessage();
                 message.setOperationType("DELETE");
                 message.setPosition(offset);
-                message.setText(deletedText);
                 message.setUserId(collaborationService.getWebSocketService().getUserId());
                 message.setLength(length);  
                 message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
                 collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
             } else {
                 // Multiple characters deletion (selection)
+                System.out.println("Multiple characters deletion (selection)");
                 List<TextOperationMessage> deleteOperations = new ArrayList<>();
                 for (int i = 0; i < length; i++) {
                     TextOperationMessage message = new TextOperationMessage();
                     message.setOperationType("DELETE");
-                    message.setPosition(offset + i);
-                    message.setText(String.valueOf(deletedText.charAt(i)));
+                    message.setPosition(offset);
                     message.setUserId(collaborationService.getWebSocketService().getUserId());
-                    message.setLength(length);
+                    message.setLength(1);       
+                    message.setTextLength(length);
                     message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
                     deleteOperations.add(message);
                 }
@@ -91,10 +96,9 @@ public class CollaborativeEditorController {
                     collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
                 }
             }
-        } catch (javax.swing.text.BadLocationException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
- 
     }
 
     public void requestInitialText(){

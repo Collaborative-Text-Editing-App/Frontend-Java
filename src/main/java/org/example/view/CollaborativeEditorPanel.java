@@ -3,6 +3,7 @@ package org.example.view;
 import org.example.controller.CollaborativeEditorController;
 import org.example.model.DocumentInfo;
 import org.example.dto.DocumentUpdateMessage;
+import org.example.dto.TextOperationMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -172,6 +173,10 @@ public class CollaborativeEditorPanel extends JPanel {
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
+        
+        // Set the textArea in the controller
+        controller.setTextArea(textArea);
+        
         // Add key bindings for paste
         textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
         textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
