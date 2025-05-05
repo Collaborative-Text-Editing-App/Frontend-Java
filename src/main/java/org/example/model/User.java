@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 
 public class User {
     private int userId;
+    private String id;
     private UserRole role;
     private Cursor cursor;
     private boolean connected;
@@ -18,6 +19,12 @@ public class User {
         return userId;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+    public String getId() {
+        return id;
+    }
 
     public UserRole getRole() {
         return role;
