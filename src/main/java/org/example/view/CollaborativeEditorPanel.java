@@ -1,7 +1,7 @@
 package org.example.view;
 
-import org.example.service.WebSocketService;
-import org.example.dto.TextOperationMessage;
+import org.example.controller.CollaborativeEditorController;
+import org.example.model.DocumentInfo;
 import org.example.dto.DocumentUpdateMessage;
 
 import javax.swing.*;
@@ -29,15 +29,17 @@ public class CollaborativeEditorPanel extends JPanel {
     private final Color primaryColor = new Color(70, 130, 180); // Steel Blue
     private final Color foregroundColor = Color.WHITE;
     private JTextArea textArea;
-    private final WebSocketService webSocketService;
+    private final DocumentInfo documentInfo;
     private boolean isRemoteUpdate = false;
+    private final CollaborativeEditorController controller;
     private boolean isPaste = false;
     private boolean isTyping = false;
     private long lastTypingTime = 0;
     private static final long TYPING_THRESHOLD = 100; // milliseconds between keystrokes
 
-    public CollaborativeEditorPanel(WebSocketService webSocketService) {
-        this.webSocketService = webSocketService;
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
+        this.documentInfo = documentInfo;
+        this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());
 
         // Request initial document state
@@ -46,7 +48,7 @@ public class CollaborativeEditorPanel extends JPanel {
         // Start a thread to handle document updates
         new Thread(() -> {
             while (true) {
-                DocumentUpdateMessage update = webSocketService.getNextDocumentUpdate();
+                DocumentUpdateMessage update = this.controller.getDocumentUpdates();
                 System.out.println("Received update: " + update);
                 if (update != null) {
                     SwingUtilities.invokeLater(() -> {
@@ -74,18 +76,9 @@ public class CollaborativeEditorPanel extends JPanel {
         styleButton(redoButton);
         styleButton(exportButton);
 
-        undoButton.addActionListener(e -> {
-            TextOperationMessage undoMsg = new TextOperationMessage();
-            System.out.println("Sending undo message");
-            undoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
-            webSocketService.sendMessage("/document/undo", undoMsg);
-        });
+        undoButton.addActionListener(e -> controller.undoAction());
 
-        redoButton.addActionListener(e -> {
-            TextOperationMessage redoMsg = new TextOperationMessage();
-            redoMsg.setDocumentId("test-doc-123"); // or get from webSocketService
-            webSocketService.sendMessage("/document/redo", redoMsg);
-        });
+        redoButton.addActionListener(e -> controller.redoAction());
 
         exportButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -109,7 +102,7 @@ public class CollaborativeEditorPanel extends JPanel {
         JLabel viewerLabel = new JLabel("Viewer Code");
         viewerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         viewerLabel.setFont(labelFont);
-        JTextField viewerCode = new JTextField("#yq1xrx", 8);
+        JTextField viewerCode = new JTextField(documentInfo.getViewerCode(), 8);
         viewerCode.setFont(textFont);
         styleTextField(viewerCode);
         viewerCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
@@ -130,7 +123,7 @@ public class CollaborativeEditorPanel extends JPanel {
         JLabel editorLabel = new JLabel("Editor Code");
         editorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         editorLabel.setFont(labelFont);
-        JTextField editorCode = new JTextField("#yq1xrx", 8);
+        JTextField editorCode = new JTextField(documentInfo.getEditorCode(), 8);
         editorCode.setFont(textFont);
         styleTextField(editorCode);
         editorCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
@@ -152,9 +145,18 @@ public class CollaborativeEditorPanel extends JPanel {
         activeUsersLabel.setFont(labelFont);
         activeUsersLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JList<String> userList = new JList<>(new String[]{
-                "Anonymous Frog (you)", "Anonymous Crab - line 2"
-        });
+        JList<String> userList = new JList<>(
+                documentInfo.getActiveUsers()
+                        .stream()
+                        .map(user ->
+                                "ID: " + user.getUserId() +
+                                        ", Role: " + user.getRole() +
+                                        ", Cursor: pos " + (user.getCursor() != null ? user.getCursor().getPosition() : "-") +
+                                        ", Connected: " + user.isConnected()
+                        )
+                        .toArray(String[]::new)
+        );
+
         userList.setFont(textFont);
         JScrollPane userScroll = new JScrollPane(userList);
         userScroll.setPreferredSize(new Dimension(200, 100));
@@ -164,10 +166,11 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(userScroll);
 
         // === Editor Area ===
-        textArea = new JTextArea("");
+        textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
-
+        textScroll.setPreferredSize(new Dimension(800, 800));
+        textScroll.setMinimumSize(new Dimension(600, 600));
         // Add key bindings for paste
         textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
         textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
@@ -203,31 +206,9 @@ public class CollaborativeEditorPanel extends JPanel {
                     int offset = e.getOffset();
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
-                    
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("INSERT");
-                    message.setPosition(offset);
-                    message.setUserId(webSocketService.getUserId());
-                    message.setDocumentId("test-doc-123");
 
-                    if (isPaste || !isTyping) {
-                        // Send the whole string for paste or non-typing operations
-                        message.setText(newText);
-                        webSocketService.sendMessage("/document.edit", message);
-                        isPaste = false;
-                        isTyping = false;
-                    } else {
-                        // Send character by character for typing
-                        for (int i = 0; i < newText.length(); i++) {
-                            TextOperationMessage charMessage = new TextOperationMessage();
-                            charMessage.setOperationType("INSERT");
-                            charMessage.setPosition(offset + i);
-                            charMessage.setText(String.valueOf(newText.charAt(i)));
-                            charMessage.setUserId(webSocketService.getUserId());
-                            charMessage.setDocumentId("test-doc-123");
-                            webSocketService.sendMessage("/document.edit", charMessage);
-                        }
-                    }
+                    controller.insertText(newText, offset);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -241,36 +222,8 @@ public class CollaborativeEditorPanel extends JPanel {
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
-                    String deletedText = textArea.getText(offset, length);
-                    
-                    if (length == 1) {
-                        // Single character deletion (backspace or delete key)
-                        TextOperationMessage message = new TextOperationMessage();
-                        message.setOperationType("DELETE");
-                        message.setPosition(offset);
-                        message.setText(deletedText);
-                        message.setUserId(webSocketService.getUserId());
-                        message.setLength(length);  
-                        message.setDocumentId(webSocketService.getDocumentId());
-                        webSocketService.sendMessage("/document.edit", message);
-                    } else {
-                        // Multiple characters deletion (selection)
-                        List<TextOperationMessage> deleteOperations = new ArrayList<>();
-                        for (int i = 0; i < length; i++) {
-                            TextOperationMessage message = new TextOperationMessage();
-                            message.setOperationType("DELETE");
-                            message.setPosition(offset + i);
-                            message.setText(String.valueOf(deletedText.charAt(i)));
-                            message.setUserId(webSocketService.getUserId());
-                            message.setLength(length);
-                            message.setDocumentId(webSocketService.getDocumentId());
-                            deleteOperations.add(message);
-                        }
-                        // Send all delete operations as a batch
-                        for (TextOperationMessage op : deleteOperations) {
-                            webSocketService.sendMessage("/document.edit", op);
-                        }
-                    }
+                    controller.removeText(offset, length);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -278,7 +231,13 @@ public class CollaborativeEditorPanel extends JPanel {
 
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                // This is for style changes, which we don't need to handle
+                sendTextUpdate();
+            }
+
+            private void sendTextUpdate() {
+//                if (webSocketService != null) {
+//                    webSocketService.sendMessage("/app/text-update", textArea.getText());
+//                }
             }
         });
 
@@ -289,11 +248,7 @@ public class CollaborativeEditorPanel extends JPanel {
 
     private void requestInitialDocumentState() {
         // Send a request to get the current document state
-        TextOperationMessage message = new TextOperationMessage();
-        message.setOperationType("GET_STATE");
-        message.setUserId(webSocketService.getUserId());
-        message.setDocumentId(webSocketService.getDocumentId());
-        webSocketService.sendMessage("/document.edit", message);
+        controller.requestInitialText();
     }
 
     private JPanel createHorizontalSection(JComponent... components) {
@@ -345,4 +300,5 @@ public class CollaborativeEditorPanel extends JPanel {
                 JOptionPane.ERROR_MESSAGE);
         }
     }
+
 }

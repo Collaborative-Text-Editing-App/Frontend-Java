@@ -24,30 +24,32 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WebSocketService {
     private static final String WS_URL = "http://localhost:8080/editor-websocket";
-    private static final String TEST_DOCUMENT_ID = "test-doc-123"; // Hardcoded ID for testing
     private StompSession stompSession;
-    private String userId;
-    private String documentId;
+    private StompSessionHandler messageHandler;
+    private final String documentId;
+    private final String userId;
     private final BlockingQueue<DocumentUpdateMessage> documentUpdates = new LinkedBlockingQueue<>();
 
-    public WebSocketService() {
+    public WebSocketService(String documentId) {
         this.userId = UUID.randomUUID().toString();
-        this.documentId = TEST_DOCUMENT_ID; // Set hardcoded ID for testing
+        this.documentId = documentId;
     }
 
     public void connect() {
         List<Transport> transports = new ArrayList<>();
         transports.add(new WebSocketTransport(new StandardWebSocketClient()));
         WebSocketClient client = new SockJsClient(transports);
-        
+
         WebSocketStompClient stompClient = new WebSocketStompClient(client);
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
         StompSessionHandler sessionHandler = new StompSessionHandlerAdapter() {
             @Override
             public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-                System.out.println("Connected to WebSocket server");
-                // Subscribe to document updates
+                System.out.println("Connected to WebSocket server for document: " + documentId);
+                // Subscribe to document-specific updates
+//                session.subscribe("/topic/documents/" + documentId + "/text-updates", this);
+//                session.subscribe("/topic/documents/" + documentId + "/user-list", this);
                 session.subscribe("/topic/document/" + documentId, new StompFrameHandler() {
                     @Override
                     public Type getPayloadType(StompHeaders headers) {
@@ -86,16 +88,14 @@ public class WebSocketService {
 
     public void sendMessage(String destination, Object payload) {
         if (stompSession != null && stompSession.isConnected()) {
-            stompSession.send("/app" + destination, payload);
+            stompSession.send(destination, payload);
         } else {
             System.err.println("Not connected to WebSocket server");
         }
     }
-
     public String getUserId() {
         return userId;
     }
-
     public String getDocumentId() {
         return documentId;
     }
