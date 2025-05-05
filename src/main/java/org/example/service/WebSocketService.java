@@ -35,8 +35,8 @@ public class WebSocketService {
     private final BlockingQueue<DocumentUpdateMessage> documentUpdates = new LinkedBlockingQueue<>();
     private final BlockingQueue<UserUpdateMessage> userUpdates = new LinkedBlockingQueue<>();
 
-    public WebSocketService(String documentId) {
-        this.userId = UUID.randomUUID().toString();
+    public WebSocketService(String documentId, String userId) {
+        this.userId = userId;
         this.documentId = documentId;
     }
     public void notifyActiveUsers(User user) {
