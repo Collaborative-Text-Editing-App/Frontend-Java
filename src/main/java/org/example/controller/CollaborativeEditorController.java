@@ -41,7 +41,7 @@ public class CollaborativeEditorController {
         if (isPaste || !isTyping) {
             // Send the whole string for paste or non-typing operations
             message.setText(newText);
-            collaborationService.getWebSocketService().sendMessage("/document.edit", message);
+            collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
             isPaste = false;
             isTyping = false;
         } else {
@@ -53,7 +53,7 @@ public class CollaborativeEditorController {
                 charMessage.setText(String.valueOf(newText.charAt(i)));
                 charMessage.setUserId(message.getUserId());
                 charMessage.setDocumentId(message.getDocumentId());
-                collaborationService.getWebSocketService().sendMessage("/document.edit", charMessage);
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", charMessage);
             }
         }
     }
@@ -71,7 +71,7 @@ public class CollaborativeEditorController {
                 message.setUserId(collaborationService.getWebSocketService().getUserId());
                 message.setLength(length);  
                 message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
-                collaborationService.getWebSocketService().sendMessage("/document.edit", message);
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
             } else {
                 // Multiple characters deletion (selection)
                 List<TextOperationMessage> deleteOperations = new ArrayList<>();
@@ -87,7 +87,7 @@ public class CollaborativeEditorController {
                 }
                 // Send all delete operations as a batch
                 for (TextOperationMessage op : deleteOperations) {
-                    collaborationService.getWebSocketService().sendMessage("/document.edit", op);
+                    collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
                 }
             }
         } catch (javax.swing.text.BadLocationException e) {
