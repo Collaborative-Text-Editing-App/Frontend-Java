@@ -98,7 +98,7 @@ public class CollaborativeEditorService {
                 Gson gson = new Gson(); // or Jackson's ObjectMapper
                 DocumentInfo info = gson.fromJson(response, DocumentInfo.class);
 
-                webSocketService = new WebSocketService(info.getId());
+                webSocketService = new WebSocketService(info.getId(), info.getActiveUsers().get(info.getActiveUsers().size() - 1).getId());
                 webSocketService.connect();
                 webSocketService.notifyActiveUsers(info.getActiveUsers().get(info.getActiveUsers().size() - 1));
 
@@ -143,7 +143,7 @@ public class CollaborativeEditorService {
                 Gson gson = new Gson();
                 DocumentInfo info = gson.fromJson(response, DocumentInfo.class);
 
-                webSocketService = new WebSocketService(info.getId());
+                webSocketService = new WebSocketService(info.getId(), info.getActiveUsers().get(info.getActiveUsers().size() - 1).getId());
                 webSocketService.connect();
                 webSocketService.notifyActiveUsers(info.getActiveUsers().get(info.getActiveUsers().size() - 1));
 
@@ -187,7 +187,7 @@ public class CollaborativeEditorService {
                 JoinDocumentResponse joinResponse = gson.fromJson(response, JoinDocumentResponse.class);
                 if (joinResponse.getDocument() != null) {
                     DocumentInfo document = joinResponse.getDocument();
-                    webSocketService = new WebSocketService(joinResponse.getDocument().getId());
+                    webSocketService = new WebSocketService(joinResponse.getDocument().getId(), document.getActiveUsers().get(document.getActiveUsers().size() - 1).getId());
                     webSocketService.connect();
                     webSocketService.notifyActiveUsers(document.getActiveUsers().get(document.getActiveUsers().size() - 1));
                 }
