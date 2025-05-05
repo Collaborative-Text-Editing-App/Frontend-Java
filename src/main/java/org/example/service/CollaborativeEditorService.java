@@ -100,7 +100,7 @@ public class CollaborativeEditorService {
 
                 webSocketService = new WebSocketService(info.getId());
                 webSocketService.connect();
-                webSocketService.notifyActiveUsers(UserRole.EDITOR);
+                webSocketService.notifyActiveUsers(info.getActiveUsers().get(info.getActiveUsers().size() - 1));
 
                 return info;
             } catch (Exception e) {
@@ -145,6 +145,8 @@ public class CollaborativeEditorService {
 
                 webSocketService = new WebSocketService(info.getId());
                 webSocketService.connect();
+                webSocketService.notifyActiveUsers(info.getActiveUsers().get(info.getActiveUsers().size() - 1));
+
 
                 return info;
             } catch (Exception e) {
@@ -185,10 +187,9 @@ public class CollaborativeEditorService {
                 JoinDocumentResponse joinResponse = gson.fromJson(response, JoinDocumentResponse.class);
                 if (joinResponse.getDocument() != null) {
                     DocumentInfo document = joinResponse.getDocument();
-                    UserRole role = code.equals(document.getEditorCode()) ? UserRole.EDITOR : UserRole.VIEWER;
                     webSocketService = new WebSocketService(joinResponse.getDocument().getId());
                     webSocketService.connect();
-                    webSocketService.notifyActiveUsers(role);
+                    webSocketService.notifyActiveUsers(document.getActiveUsers().get(document.getActiveUsers().size() - 1));
                 }
                 return joinResponse;
             } catch (Exception e) {
@@ -197,7 +198,7 @@ public class CollaborativeEditorService {
             }
         } else {
             System.err.println("RESPONSE IS NOT 200");
-            throw new IOException("Server returned status: " + status);
+            return null;
         }
         return null;
     }
