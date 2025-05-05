@@ -9,6 +9,15 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.io.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.example.view.styling.UIStyle.styleButton;
 import static org.example.view.styling.UIStyle.styleTextField;
@@ -23,6 +32,11 @@ public class CollaborativeEditorPanel extends JPanel {
     private final DocumentInfo documentInfo;
     private boolean isRemoteUpdate = false;
     private final CollaborativeEditorController controller;
+    private boolean isPaste = false;
+    private boolean isTyping = false;
+    private long lastTypingTime = 0;
+    private static final long TYPING_THRESHOLD = 100; // milliseconds between keystrokes
+
     public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
         this.controller = collaborativeEditorController;
@@ -38,15 +52,9 @@ public class CollaborativeEditorPanel extends JPanel {
                 System.out.println("Received update: " + update);
                 if (update != null) {
                     SwingUtilities.invokeLater(() -> {
-                        // Only update if the content is different to avoid cursor jumping
                         if (!textArea.getText().equals(update.getContent())) {
                             isRemoteUpdate = true;
-//                            int caretPosition = textArea.getCaretPosition();
                             textArea.setText(update.getContent());
-//                            // Restore cursor position if possible
-//                            if (caretPosition <= update.getContent().length()) {
-//                                textArea.setCaretPosition(caretPosition);
-//                            }
                             isRemoteUpdate = false;
                         }
                     });
@@ -163,6 +171,32 @@ public class CollaborativeEditorPanel extends JPanel {
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
+        // Add key bindings for paste
+        textArea.getInputMap().put(KeyStroke.getKeyStroke("ctrl V"), "paste-from-clipboard");
+        textArea.getActionMap().put("paste-from-clipboard", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                isPaste = true;
+                textArea.paste();
+            }
+        });
+
+        // Add key listener to detect typing
+        textArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() != KeyEvent.VK_CONTROL && 
+                    e.getKeyCode() != KeyEvent.VK_SHIFT && 
+                    e.getKeyCode() != KeyEvent.VK_ALT) {
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastTypingTime > TYPING_THRESHOLD) {
+                        isTyping = true;
+                    }
+                    lastTypingTime = currentTime;
+                }
+            }
+        });
+
         // Add text change listener to send updates to WebSocket
         textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -173,7 +207,7 @@ public class CollaborativeEditorPanel extends JPanel {
                     int length = e.getLength();
                     String newText = textArea.getText(offset, length);
 
-                    controller.insertText(newText, offset);
+                    controller.insertText(newText, offset, isPaste, isTyping);
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -187,7 +221,8 @@ public class CollaborativeEditorPanel extends JPanel {
                 }
                 try {
                     int offset = e.getOffset();
-                    controller.removeText(offset);
+                    int length = e.getLength();
+                    controller.removeText(offset, length);
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
