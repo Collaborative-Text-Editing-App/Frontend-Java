@@ -3,6 +3,7 @@ package org.example.view;
 import org.example.controller.CollaborativeEditorController;
 import org.example.model.DocumentInfo;
 import org.example.dto.DocumentUpdateMessage;
+import org.example.model.UserRole;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -37,7 +38,7 @@ public class CollaborativeEditorPanel extends JPanel {
     private long lastTypingTime = 0;
     private static final long TYPING_THRESHOLD = 100; // milliseconds between keystrokes
 
-    public CollaborativeEditorPanel(DocumentInfo documentInfo, CollaborativeEditorController collaborativeEditorController) {
+    public CollaborativeEditorPanel(DocumentInfo documentInfo, UserRole role, CollaborativeEditorController collaborativeEditorController) {
         this.documentInfo = documentInfo;
         this.controller = collaborativeEditorController;
         setLayout(new BorderLayout());
@@ -98,47 +99,46 @@ public class CollaborativeEditorPanel extends JPanel {
         leftPanel.add(editSection);
         leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Section 2: Viewer Code
-        JLabel viewerLabel = new JLabel("Viewer Code");
-        viewerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        viewerLabel.setFont(labelFont);
-        JTextField viewerCode = new JTextField(documentInfo.getViewerCode(), 8);
-        viewerCode.setFont(textFont);
-        styleTextField(viewerCode);
-        viewerCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
-        viewerCode.setAlignmentX(Component.CENTER_ALIGNMENT); // or LEFT_ALIGNMENT
 
-        styleTextField(viewerCode);
+        if (role == UserRole.EDITOR) {
+            // Section 2: Viewer Code
+            JLabel viewerLabel = new JLabel("Viewer Code");
+            viewerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            viewerLabel.setFont(labelFont);
+            JTextField viewerCode = new JTextField(documentInfo.getViewerCode(), 8);
+            viewerCode.setFont(textFont);
+            styleTextField(viewerCode);
+            viewerCode.setMaximumSize(new Dimension(120, 50));
+            viewerCode.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton copyViewer = new JButton("Copy");
-        styleButton(copyViewer);
-        copyViewer.addActionListener(e -> copyToClipboard(viewerCode.getText()));
+            JButton copyViewer = new JButton("Copy");
+            styleButton(copyViewer);
+            copyViewer.addActionListener(e -> copyToClipboard(viewerCode.getText()));
 
-        leftPanel.add(viewerLabel);
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        leftPanel.add(createHorizontalSection(viewerCode, copyViewer));
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+            leftPanel.add(viewerLabel);
+            leftPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+            leftPanel.add(createHorizontalSection(viewerCode, copyViewer));
+            leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Section 3: Editor Code
-        JLabel editorLabel = new JLabel("Editor Code");
-        editorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        editorLabel.setFont(labelFont);
-        JTextField editorCode = new JTextField(documentInfo.getEditorCode(), 8);
-        editorCode.setFont(textFont);
-        styleTextField(editorCode);
-        editorCode.setMaximumSize(new Dimension(120, 50)); // prevent it from growing vertically
-        editorCode.setAlignmentX(Component.CENTER_ALIGNMENT); // or LEFT_ALIGNMENT
+            // Section 3: Editor Code
+            JLabel editorLabel = new JLabel("Editor Code");
+            editorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            editorLabel.setFont(labelFont);
+            JTextField editorCode = new JTextField(documentInfo.getEditorCode(), 8);
+            editorCode.setFont(textFont);
+            styleTextField(editorCode);
+            editorCode.setMaximumSize(new Dimension(120, 50));
+            editorCode.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        styleTextField(editorCode);
+            JButton copyEditor = new JButton("Copy");
+            styleButton(copyEditor);
+            copyEditor.addActionListener(e -> copyToClipboard(editorCode.getText()));
 
-        JButton copyEditor = new JButton("Copy");
-        styleButton(copyEditor);
-        copyEditor.addActionListener(e -> copyToClipboard(editorCode.getText()));
-
-        leftPanel.add(editorLabel);
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        leftPanel.add(createHorizontalSection(editorCode, copyEditor));
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+            leftPanel.add(editorLabel);
+            leftPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+            leftPanel.add(createHorizontalSection(editorCode, copyEditor));
+            leftPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        }
 
         // Section 4: Active Users
         JLabel activeUsersLabel = new JLabel("Active Users");
@@ -168,6 +168,7 @@ public class CollaborativeEditorPanel extends JPanel {
         // === Editor Area ===
         textArea = new JTextArea(documentInfo.getContent());
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        textArea.setEditable(role == UserRole.EDITOR);  // This disables editing for VIEWER
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
         textScroll.setMinimumSize(new Dimension(600, 600));
@@ -185,8 +186,8 @@ public class CollaborativeEditorPanel extends JPanel {
         textArea.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() != KeyEvent.VK_CONTROL && 
-                    e.getKeyCode() != KeyEvent.VK_SHIFT && 
+                if (e.getKeyCode() != KeyEvent.VK_CONTROL &&
+                    e.getKeyCode() != KeyEvent.VK_SHIFT &&
                     e.getKeyCode() != KeyEvent.VK_ALT) {
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastTypingTime > TYPING_THRESHOLD) {
@@ -273,12 +274,12 @@ public class CollaborativeEditorPanel extends JPanel {
     public void exportToFile(File file) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write(textArea.getText());
-            JOptionPane.showMessageDialog(this, 
+            JOptionPane.showMessageDialog(this,
                 "File exported successfully!",
                 "Export Complete",
                 JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, 
+            JOptionPane.showMessageDialog(this,
                 "Error exporting file: " + e.getMessage(),
                 "Error",
                 JOptionPane.ERROR_MESSAGE);

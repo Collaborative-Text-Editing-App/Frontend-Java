@@ -4,6 +4,7 @@ import org.example.dto.DocumentUpdateMessage;
 import org.example.dto.JoinDocumentResponse;
 import org.example.dto.TextOperationMessage;
 import org.example.model.DocumentInfo;
+import org.example.model.UserRole;
 import org.example.service.CollaborativeEditorService;
 import org.example.service.WebSocketService;
 import org.example.view.CollaborativeEditorPanel;
@@ -188,7 +189,7 @@ public class CollaborativeEditorController {
 
             SwingUtilities.invokeLater(() -> {
                 // Pass WebSocketService into the editor panel
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, UserRole.EDITOR, this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);
@@ -213,7 +214,7 @@ public class CollaborativeEditorController {
             DocumentInfo documentInfo = collaborationService.importDoc(content);
             SwingUtilities.invokeLater(() -> {
                 // Pass WebSocketService into the editor panel
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo, this);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(documentInfo,UserRole.EDITOR, this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + documentInfo.getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);
@@ -236,8 +237,17 @@ public class CollaborativeEditorController {
     public void joinDoc(String code) {
         try {
             JoinDocumentResponse joinResponse = collaborationService.joinDocumentWithCode(code);
+            if(joinResponse == null || joinResponse.getDocument() == null) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(homeScreen,
+                            "Document was not found",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                });
+                return;
+            }
+
             SwingUtilities.invokeLater(() -> {
-                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(joinResponse.getDocument(), this);
+                CollaborativeEditorPanel editorPanel = new CollaborativeEditorPanel(joinResponse.getDocument(), joinResponse.getRole(), this);
                 JFrame editorFrame = new JFrame("Collaborative Editor - " + joinResponse.getDocument().getId());
                 editorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 editorFrame.add(editorPanel);

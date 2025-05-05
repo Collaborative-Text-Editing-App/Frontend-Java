@@ -192,7 +192,7 @@ public class CollaborativeEditorService {
             }
         } else {
             System.err.println("RESPONSE IS NOT 200");
-            throw new IOException("Server returned status: " + status);
+            return null;
         }
         return null;
     }
