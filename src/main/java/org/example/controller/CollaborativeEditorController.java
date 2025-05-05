@@ -80,21 +80,23 @@ public class CollaborativeEditorController {
             } else {
                 // Multiple characters deletion (selection)
                 System.out.println("Multiple characters deletion (selection)");
-                List<TextOperationMessage> deleteOperations = new ArrayList<>();
-                for (int i = 0; i < length; i++) {
-                    TextOperationMessage message = new TextOperationMessage();
-                    message.setOperationType("DELETE");
-                    message.setPosition(offset);
-                    message.setUserId(collaborationService.getWebSocketService().getUserId());
-                    message.setLength(1);       
-                    message.setTextLength(length);
-                    message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
-                    deleteOperations.add(message);
-                }
+                //List<TextOperationMessage> deleteOperations = new ArrayList<>();
+                System.out.println("Deleting " + length + " characters at offset " + offset);
+                TextOperationMessage message = new TextOperationMessage();
+                message.setOperationType("DELETE");
+                message.setPosition(offset);
+                message.setUserId(collaborationService.getWebSocketService().getUserId());
+                message.setLength(1);       
+                message.setTextLength(length);
+                message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+                //deleteOperations.add(message);
                 // Send all delete operations as a batch
-                for (TextOperationMessage op : deleteOperations) {
-                    collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
-                }
+                System.out.println("Sending message: " + message);
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+                System.out.println("Message sent");
+
+                // for (TextOperationMessage op : deleteOperations) {
+                // }
             }
         } catch (Exception e) {
             e.printStackTrace();
