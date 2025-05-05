@@ -167,6 +167,7 @@ public class CollaborativeEditorPanel extends JPanel {
 
         // === Editor Area ===
         textArea = new JTextArea(documentInfo.getContent());
+        controller.setTextArea(textArea);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         JScrollPane textScroll = new JScrollPane(textArea);
         textScroll.setPreferredSize(new Dimension(800, 800));
@@ -222,7 +223,8 @@ public class CollaborativeEditorPanel extends JPanel {
                 try {
                     int offset = e.getOffset();
                     int length = e.getLength();
-                    controller.removeText(offset, length, textArea);
+                    String deletedText = textArea.getText(offset, length);
+                    controller.removeText(offset, length, deletedText);
 
                 } catch (Exception ex) {
                     ex.printStackTrace();
