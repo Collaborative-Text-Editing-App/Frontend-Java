@@ -29,6 +29,72 @@ public class CollaborativeEditorController {
         return this.collaborationService.getWebSocketService().getNextDocumentUpdate();
     }
 
+    public void insertText(String newText, int offset, boolean isPaste, boolean isTyping) {
+        TextOperationMessage message = new TextOperationMessage();
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());  
+        message.setOperationType("INSERT");
+        message.setPosition(offset);
+        message.setUserId(collaborationService.getWebSocketService().getUserId());
+        message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+
+        if (isPaste || !isTyping) {
+            // Send the whole string for paste or non-typing operations
+            message.setText(newText);
+            collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+            isPaste = false;
+            isTyping = false;
+        } else {
+            // Send character by character for typing
+            for (int i = 0; i < newText.length(); i++) {
+                TextOperationMessage charMessage = new TextOperationMessage();
+                charMessage.setOperationType("INSERT");
+                charMessage.setPosition(offset + i);
+                charMessage.setText(String.valueOf(newText.charAt(i)));
+                charMessage.setUserId(message.getUserId());
+                charMessage.setDocumentId(message.getDocumentId());
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", charMessage);
+            }
+        }
+    }
+
+    public void removeText(int offset, int length, JTextArea textArea) {
+        try {
+            String deletedText = textArea.getText(offset, length);
+                    
+            if (length == 1) {
+                // Single character deletion (backspace or delete key)
+                TextOperationMessage message = new TextOperationMessage();
+                message.setOperationType("DELETE");
+                message.setPosition(offset);
+                message.setText(deletedText);
+                message.setUserId(collaborationService.getWebSocketService().getUserId());
+                message.setLength(length);  
+                message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+                collaborationService.getWebSocketService().sendMessage("/app/document.edit", message);
+            } else {
+                // Multiple characters deletion (selection)
+                List<TextOperationMessage> deleteOperations = new ArrayList<>();
+                for (int i = 0; i < length; i++) {
+                    TextOperationMessage message = new TextOperationMessage();
+                    message.setOperationType("DELETE");
+                    message.setPosition(offset + i);
+                    message.setText(String.valueOf(deletedText.charAt(i)));
+                    message.setUserId(collaborationService.getWebSocketService().getUserId());
+                    message.setLength(length);
+                    message.setDocumentId(collaborationService.getWebSocketService().getDocumentId());
+                    deleteOperations.add(message);
+                }
+                // Send all delete operations as a batch
+                for (TextOperationMessage op : deleteOperations) {
+                    collaborationService.getWebSocketService().sendMessage("/app/document.edit", op);
+                }
+            }
+        } catch (javax.swing.text.BadLocationException e) {
+            e.printStackTrace();
+        }
+ 
+    }
+
     public void requestInitialText(){
         TextOperationMessage message = new TextOperationMessage();
         message.setOperationType("GET_STATE");
